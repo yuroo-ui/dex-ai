@@ -1,131 +1,39 @@
-// ═══ BRIDGE LOGIC (Li.Fi + Relay) ═══
+// ═══ BRIDGE LOGIC — Arc Network ═══
+// Arc has native bridge: https://bridge.arc.network
+// Supports: Ethereum, Arbitrum, Optimism, Base → Arc
+
+const ARC_BRIDGE_URL = 'https://bridge.arc.network';
+const ARC_SUPPORTED_SOURCES = [1, 42161, 10, 8453, 137, 56];
 
 const Bridge = {
-  provider: 'lifi', // 'lifi' or 'relay'
   fromChain: 1,
-  toChain: 42161,
+  toChain: ARC_CHAIN_ID,
   fromToken: null,
   toToken: null,
   quote: null,
 
-  async getQuote(fromAmount) {
-    if (!this.fromToken || !this.toToken || !fromAmount || fromAmount === '0') return null;
-
-    const amountWei = parseAmount(fromAmount, this.fromToken.decimals);
-
+  async getQuote(amount) {
+    if (!this.fromToken || !this.toToken || !amount) return null;
     try {
-      if (this.provider === 'relay') {
-        return await this.getRelayQuote(amountWei);
-      } else {
-        return await this.getLifiQuote(amountWei);
-      }
+      // Arc Bridge — USDC in/out
+      const fee = parseFloat(amount) * 0.001; // 0.1% bridge fee estimate
+      this.quote = {
+        toAmount: (parseFloat(amount) - fee).toFixed(6),
+        fee: fee.toFixed(6),
+        estimatedTime: '~2-5 min',
+        route: 'Arc Native Bridge',
+      };
+      return this.quote;
     } catch (err) {
       console.error('Bridge quote error:', err);
       return null;
     }
   },
 
-  async getLifiQuote(amountWei) {
-    const params = new URLSearchParams({
-      fromChain: this.fromChain,
-      toChain: this.toChain,
-      fromToken: this.fromToken.address,
-      toToken: this.toToken.address,
-      fromAmount: amountWei,
-      fromAddress: Wallet.address || '0x0000000000000000000000000000000000000000',
-      slippage: '0.005',
-    });
-
-    const resp = await fetch(`https://li.quest/v1/quote?${params}`);
-    if (!resp.ok) throw new Error('No bridge route');
-    const data = await resp.json();
-
-    if (!data || !data.estimate) return null;
-
-    this.quote = data;
-    return {
-      provider: data.tool || 'Li.Fi',
-      toAmount: data.estimate.toAmount,
-      toAmountMin: data.estimate.toAmountMin,
-      gasCostUSD: data.estimate.gasCosts?.[0]?.amountUSD || '$0',
-      fee: data.estimate.feeCosts?.[0]?.amountUSD || '$0',
-      estimateTime: data.estimate.executionDuration || 120,
-    };
-  },
-
-  async getRelayQuote(amountWei) {
-    // Relay Protocol API
-    const body = {
-      originChainId: this.fromChain,
-      destinationChainId: this.toChain,
-      user: Wallet.address || '0x0000000000000000000000000000000000000000',
-      currency: this.fromToken.address,
-      recipient: Wallet.address || '0x0000000000000000000000000000000000000000',
-      recipientCurrency: this.toToken.address,
-      tradeType: 'EXACT_INPUT',
-      amount: amountWei,
-    };
-
-    const resp = await fetch('https://api.relay.link/quotes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    if (!resp.ok) throw new Error('No Relay route');
-    const data = await resp.json();
-
-    if (!data || !data.quotes || data.quotes.length === 0) return null;
-
-    const best = data.quotes[0];
-    this.quote = best;
-    return {
-      provider: 'Relay',
-      toAmount: best.details.currencyOut.amountFormatted || '0',
-      toAmountMin: best.details.currencyOut.minAmount || '0',
-      gasCostUSD: '$0',
-      fee: '$0',
-      estimateTime: best.details.timeEstimated || 30,
-    };
-  },
-
-  async execute() {
-    if (!this.quote || !Wallet.signer) return;
-
-    if (this.provider === 'relay') {
-      showToast('Relay bridge: open relay.link in wallet browser', 'error');
-      return;
-    }
-
-    const tx = this.quote.transactionRequest;
-    if (!tx) {
-      showToast('No transaction data', 'error');
-      return;
-    }
-
-    try {
-      showToast('Confirm bridge in wallet...');
-      const response = await Wallet.signer.sendTransaction({
-        to: tx.to,
-        data: tx.data,
-        value: tx.value ? BigInt(tx.value) : 0n,
-        gasLimit: tx.gasLimit ? BigInt(tx.gasLimit) : undefined,
-      });
-
-      showToast('Bridge transaction submitted!');
-      const receipt = await response.wait();
-      if (receipt.status === 1) {
-        showToast('Bridge successful! Tokens will arrive shortly ✅', 'success');
-        await Wallet.updateBalance();
-      } else {
-        showToast('Bridge transaction failed', 'error');
-      }
-    } catch (err) {
-      if (err.code === 'ACTION_REJECTED') {
-        showToast('Transaction rejected');
-      } else {
-        showToast(err.message || 'Bridge failed', 'error');
-      }
-    }
+  async execute(amount) {
+    if (!Wallet.provider) throw new Error('Not connected');
+    // Redirect to Arc Bridge
+    window.open(`${ARC_BRIDGE_URL}?from=${this.fromChain}&to=arc&amount=${amount}`, '_blank');
+    return 'redirected';
   },
 };

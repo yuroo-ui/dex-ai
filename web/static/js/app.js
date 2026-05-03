@@ -1,24 +1,19 @@
-// ═══ MAIN APP ═══
+// ═══ Arc DEX App ═══
 
 // ─── State ───
 let currentPage = 'swap';
-let currentModal = null; // 'fromToken' | 'toToken' | 'bridgeFromToken' | 'bridgeToToken' | 'network' | 'settings'
-let modalNetworkTarget = null;
 
-// ─── DOM Refs ───
+// ─── Helpers ───
 const $ = (s) => document.querySelector(s);
 const $$ = (s) => document.querySelectorAll(s);
 
 // ─── Init ───
 document.addEventListener('DOMContentLoaded', () => {
-  Wallet.initListeners();
   initNav();
+  loadArcTokens();
   initSwap();
   initBridge();
-  initModals();
-  initSettings();
-  // Set default tokens
-  loadDefaultTokens();
+  initWallet();
 });
 
 // ─── Nav ───
@@ -35,143 +30,195 @@ function initNav() {
       $(`#page-${page}`).classList.add('active');
     });
   });
+}
 
-  // Connect button
-  $('#connectBtn').addEventListener('click', async () => {
+// ─── Load Arc Tokens ───
+function loadArcTokens() {
+  const tokens = getTokensForArc();
+  Swap.fromToken = tokens[0]; // USDC
+  Swap.toToken = tokens[0];   // USDC (will expand with more tokens)
+  updateSwapUI();
+  
+  Bridge.fromToken = { symbol: 'USDC', name: 'USD Coin', decimals: 6, address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48' };
+  Bridge.toToken = tokens[0];
+  updateBridgeUI();
+}
+
+// ─── Wallet ───
+const Wallet = {
+  provider: null,
+  signer: null,
+  address: null,
+  balance: null,
+
+  async connect() {
+    if (!window.ethereum) {
+      alert('Please install MetaMask!');
+      return;
+    }
+    try {
+      // Request Arc network
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x4CF7E2' }], // 5042002 in hex
+        });
+      } catch (e) {
+        // Add Arc network if not exists
+        if (e.code === 4902) {
+          await window.ethereum.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x4CF7E2',
+              chainName: 'Arc Testnet',
+              nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
+              rpcUrls: ['https://rpc.testnet.arc.network'],
+              blockExplorerUrls: ['https://testnet.arcscan.app'],
+            }],
+          });
+        }
+      }
+      
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      this.provider = new ethers.BrowserProvider(window.ethereum);
+      this.signer = await this.provider.getSigner();
+      this.address = accounts[0];
+      
+      // Get balance
+      const balance = await this.provider.getBalance(this.address);
+      this.balance = formatUnits(balance, 18);
+      
+      updateWalletUI();
+      getBalances();
+    } catch (err) {
+      console.error('Connect error:', err);
+    }
+  },
+
+  disconnect() {
+    this.provider = null;
+    this.signer = null;
+    this.address = null;
+    this.balance = null;
+    updateWalletUI();
+  },
+};
+
+function initWallet() {
+  $('#connectBtn').addEventListener('click', () => {
     if (Wallet.address) {
-      openWalletDrawer();
+      $('#walletDrawer').classList.add('open');
     } else {
-      await Wallet.connect();
+      Wallet.connect();
     }
   });
-
-  // Wallet drawer
-  $('#walletDrawerClose').addEventListener('click', closeWalletDrawer);
-  $('#walletDrawer').addEventListener('click', (e) => {
-    if (e.target === $('#walletDrawer')) closeWalletDrawer();
+  $('#walletDrawerClose').addEventListener('click', () => {
+    $('#walletDrawer').classList.remove('open');
   });
   $('#disconnectBtn').addEventListener('click', () => {
     Wallet.disconnect();
-    closeWalletDrawer();
+    $('#walletDrawer').classList.remove('open');
   });
+  
+  if (window.ethereum) {
+    window.ethereum.on('accountsChanged', () => Wallet.connect());
+    window.ethereum.on('chainChanged', () => window.location.reload());
+  }
 }
 
-function openWalletDrawer() {
-  const d = $('#walletDrawer');
-  d.style.display = 'flex';
-  $('#walletAddress').textContent = Wallet.address;
-  $('#walletBalance').textContent = parseFloat(Wallet.balance).toFixed(4) + ' ETH';
-  const net = NETWORKS[Wallet.chainId];
-  $('#walletNetwork').textContent = net ? net.name : `Chain ${Wallet.chainId}`;
+function updateWalletUI() {
+  const btn = $('#connectBtn');
+  if (Wallet.address) {
+    const short = Wallet.address.slice(0, 6) + '...' + Wallet.address.slice(-4);
+    btn.textContent = short;
+    $('#walletAddr').textContent = Wallet.address;
+    $('#walletShort').textContent = short;
+    $('#walletBalance').textContent = Wallet.balance ? parseFloat(Wallet.balance).toFixed(4) + ' USDC' : '—';
+    $('#walletDrawer').querySelector('.drawer-content').style.display = 'block';
+    $('#walletDrawer').querySelector('.drawer-empty').style.display = 'none';
+  } else {
+    btn.textContent = 'Connect Wallet';
+    $('#walletDrawer').querySelector('.drawer-content').style.display = 'none';
+    $('#walletDrawer').querySelector('.drawer-empty').style.display = 'block';
+  }
 }
-function closeWalletDrawer() { $('#walletDrawer').style.display = 'none'; }
+
+async function getBalances() {
+  if (!Wallet.address || !Wallet.provider) return;
+  try {
+    const bal = await Wallet.provider.getBalance(Wallet.address);
+    Wallet.balance = formatUnits(bal, 18);
+    $('#walletBalance').textContent = parseFloat(Wallet.balance).toFixed(4) + ' USDC';
+    $('#arcBalance').textContent = parseFloat(Wallet.balance).toFixed(4);
+  } catch (err) {
+    console.error('Balance error:', err);
+  }
+}
+
+function formatUnits(wei, decimals) {
+  const s = wei.toString();
+  if (s.length <= decimals) return '0.' + s.padStart(decimals, '0');
+  return s.slice(0, s.length - decimals) + '.' + s.slice(s.length - decimals);
+}
 
 // ─── Swap ───
 function initSwap() {
-  // Amount input
   $('#fromAmount').addEventListener('input', debounce(async () => {
     const val = $('#fromAmount').value;
     if (!val || val === '0') {
       $('#toAmount').value = '';
-      $('#quoteInfo').style.display = 'none';
-      updateSwapBtn();
+      $('#swapBtn').textContent = 'Enter Amount';
+      $('#swapBtn').disabled = true;
       return;
     }
+    
     const quote = await Swap.getQuote(val);
     if (quote) {
-      const formatted = formatAmount(quote.toAmount, Swap.toToken.decimals);
-      const display = parseFloat(formatted).toFixed(6);
-      $('#toAmount').value = display;
-      $('#quoteInfo').style.display = 'block';
-      $('#quoteRate').textContent = `1 ${Swap.fromToken.symbol} = ${(parseFloat(display) / parseFloat(val)).toFixed(6)} ${Swap.toToken.symbol}`;
-      $('#quoteRoute').textContent = quote.route;
-      $('#quoteSlippage').textContent = Swap.slippage + '%';
-    } else {
-      $('#toAmount').value = '—';
-      $('#quoteInfo').style.display = 'none';
+      $('#toAmount').value = quote.toAmount;
+      $('#swapBtn').textContent = `Swap USDC → USDC`;
+      $('#swapBtn').disabled = !Wallet.address;
     }
-    updateSwapBtn();
-  }, 400));
+  }, 300));
 
-  // Swap direction
-  $('#swapDirectionBtn').addEventListener('click', () => {
-    [Swap.fromToken, Swap.toToken] = [Swap.toToken, Swap.fromToken];
-    [Swap.fromChain, Swap.toChain] = [Swap.toChain, Swap.fromChain];
-    updateTokenUI('from');
-    updateTokenUI('to');
-    // Re-trigger quote
-    $('#fromAmount').dispatchEvent(new Event('input'));
+  $('#swapDirection').addEventListener('click', () => {
+    // For single-token chain, just flip amount display
+    const fromVal = $('#fromAmount').value;
+    const toVal = $('#toAmount').value;
+    $('#fromAmount').value = toVal;
+    $('#toAmount').value = fromVal;
   });
 
-  // Token select
-  $('#fromTokenBtn').addEventListener('click', () => openTokenModal('fromToken'));
-  $('#toTokenBtn').addEventListener('click', () => openTokenModal('toToken'));
-
-  // Swap button
   $('#swapBtn').addEventListener('click', async () => {
     if (!Wallet.address) {
-      await Wallet.connect();
-      if (!Wallet.address) return;
+      Wallet.connect();
+      return;
     }
-    if (!Swap.fromToken || !Swap.toToken || !$('#fromAmount').value) return;
-    const btn = $('#swapBtn');
-    btn.textContent = 'Confirming...';
-    btn.classList.add('loading');
-    await Swap.execute();
-    btn.textContent = 'Swap';
-    btn.classList.remove('loading');
+    const amount = $('#fromAmount').value;
+    if (!amount) return;
+    
+    try {
+      $('#swapBtn').textContent = 'Swapping...';
+      $('#swapBtn').disabled = true;
+      const txHash = await Swap.execute(amount);
+      $('#swapBtn').textContent = 'Success!';
+      showToast(`Transaction: ${txHash.slice(0, 10)}...`, 'success');
+      getBalances();
+    } catch (err) {
+      $('#swapBtn').textContent = 'Swap Failed';
+      showToast(err.message, 'error');
+    }
   });
-
-  // Network selector
-  $('#networkBtn').addEventListener('click', () => openNetworkModal('swap'));
 }
 
-function loadDefaultTokens() {
-  const tokens = getTokensForChain(1);
-  Swap.fromToken = tokens[0]; // ETH
-  Swap.toToken = tokens[1];  // USDC
-  updateTokenUI('from');
-  updateTokenUI('to');
-  // Set default network icon (Ethereum)
-  const ethNetSvg = getNetworkIcon('Ethereum');
-  $('#networkIcon').src = URL.createObjectURL(new Blob([ethNetSvg], { type: 'image/svg+xml' }));
-  // Bridge defaults
-  const arbTokens = getTokensForChain(42161);
-  Bridge.fromToken = tokens[1]; // USDC on ETH
-  Bridge.toToken = arbTokens[1]; // USDC on ARB
-  updateBridgeTokenUI('from');
-  updateBridgeTokenUI('to');
-  // Set default bridge network icons
-  $('#bridgeFromIcon').src = URL.createObjectURL(new Blob([getNetworkIcon('Ethereum')], { type: 'image/svg+xml' }));
-  $('#bridgeToIcon').src = URL.createObjectURL(new Blob([getNetworkIcon('Arbitrum')], { type: 'image/svg+xml' }));
-  // Set balance display
-  updateBalances();
-}
-
-function updateTokenUI(side) {
-  const token = side === 'from' ? Swap.fromToken : Swap.toToken;
-  if (!token) return;
-  const chainId = side === 'from' ? Swap.fromChain : Swap.toChain;
-  $(side === 'from' ? '#fromTokenSymbol' : '#toTokenSymbol').textContent = token.symbol;
-  const icon = $(side === 'from' ? '#fromTokenIcon' : '#toTokenIcon');
-  // Use inline SVG instead of external URL (works on mobile)
-  const svg = getTokenIcon(token.symbol, chainId);
-  const blob = new Blob([svg], { type: 'image/svg+xml' });
-  icon.src = URL.createObjectURL(blob);
-  icon.style.display = 'block';
-  // Also set fallback for broken external images
-  icon.onerror = () => {
-    icon.src = URL.createObjectURL(new Blob([getTokenIcon(token.symbol, chainId)], { type: 'image/svg+xml' }));
-  };
-}
-
-function updateSwapBtn() {
-  const btn = $('#swapBtn');
-  if (!Wallet.address) { btn.textContent = 'Connect Wallet'; btn.disabled = false; return; }
-  if (!Swap.fromToken || !Swap.toToken) { btn.textContent = 'Select Token'; btn.disabled = true; return; }
-  if (!$('#fromAmount').value) { btn.textContent = 'Enter Amount'; btn.disabled = true; return; }
-  btn.textContent = `Swap ${Swap.fromToken.symbol} → ${Swap.toToken.symbol}`;
-  btn.disabled = false;
+function updateSwapUI() {
+  if (Swap.fromToken) {
+    $('#fromSymbol').textContent = Swap.fromToken.symbol;
+    $('#fromIcon').innerHTML = getTokenIcon(Swap.fromToken.symbol);
+  }
+  if (Swap.toToken) {
+    $('#toSymbol').textContent = Swap.toToken.symbol;
+    $('#toIcon').innerHTML = getTokenIcon(Swap.toToken.symbol);
+  }
 }
 
 // ─── Bridge ───
@@ -181,311 +228,52 @@ function initBridge() {
     if (!val || val === '0') {
       $('#bridgeToAmount').value = '';
       $('#bridgeQuoteInfo').style.display = 'none';
-      updateBridgeBtn();
       return;
     }
+    
     const quote = await Bridge.getQuote(val);
     if (quote) {
-      const formatted = formatAmount(quote.toAmount, Bridge.toToken.decimals);
-      $('#bridgeToAmount').value = parseFloat(formatted).toFixed(6);
+      $('#bridgeToAmount').value = quote.toAmount;
       $('#bridgeQuoteInfo').style.display = 'block';
-      $('#bridgeQuoteProvider').textContent = quote.provider;
-      $('#bridgeQuoteTime').textContent = `~${Math.round(quote.estimateTime / 60)} min`;
-      $('#bridgeQuoteFee').textContent = quote.fee;
-    } else {
-      $('#bridgeToAmount').value = '—';
-      $('#bridgeQuoteInfo').style.display = 'none';
+      $('#bridgeQuoteInfo').innerHTML = `Fee: ${quote.fee} USDC · ~${quote.estimatedTime}`;
     }
-    updateBridgeBtn();
-  }, 400));
+  }, 300));
 
-  // Provider toggle
-  $$('.provider-badge').forEach((badge) => {
-    badge.addEventListener('click', () => {
-      $$('.provider-badge').forEach((b) => b.classList.remove('active'));
-      badge.classList.add('active');
-      Bridge.provider = badge.dataset.provider;
-      $('#bridgeFromAmount').dispatchEvent(new Event('input'));
-    });
+  $('#bridgeSwapDirection').addEventListener('click', () => {
+    // Swap bridge direction — toggle between Arc and external chain
   });
 
-  // Swap direction
-  $('#bridgeSwapDirBtn').addEventListener('click', () => {
-    [Bridge.fromChain, Bridge.toChain] = [Bridge.toChain, Bridge.fromChain];
-    [Bridge.fromToken, Bridge.toToken] = [Bridge.toToken, Bridge.fromToken];
-    $('#bridgeFromName').textContent = NETWORKS[Bridge.fromChain]?.name || 'Unknown';
-    $('#bridgeToName').textContent = NETWORKS[Bridge.toChain]?.name || 'Unknown';
-    updateBridgeTokenUI('from');
-    updateBridgeTokenUI('to');
-    $('#bridgeFromAmount').dispatchEvent(new Event('input'));
-  });
-
-  // Token select
-  $('#bridgeFromTokenBtn').addEventListener('click', () => openTokenModal('bridgeFromToken'));
-  $('#bridgeToTokenBtn').addEventListener('click', () => openTokenModal('bridgeToToken'));
-
-  // Network select
-  $('#bridgeFromNetworkBtn').addEventListener('click', () => openNetworkModal('bridgeFrom'));
-  $('#bridgeToNetworkBtn').addEventListener('click', () => openNetworkModal('bridgeTo'));
-
-  // Bridge button
   $('#bridgeBtn').addEventListener('click', async () => {
-    if (!Wallet.address) {
-      await Wallet.connect();
-      if (!Wallet.address) return;
-    }
-    if (!Bridge.fromToken || !Bridge.toToken || !$('#bridgeFromAmount').value) return;
-    const btn = $('#bridgeBtn');
-    btn.textContent = 'Bridging...';
-    btn.classList.add('loading');
-    await Bridge.execute();
-    btn.textContent = 'Bridge';
-    btn.classList.remove('loading');
+    const amount = $('#bridgeFromAmount').value;
+    if (!amount) return;
+    Bridge.execute(amount);
   });
 }
 
-function updateBridgeTokenUI(side) {
-  const token = side === 'from' ? Bridge.fromToken : Bridge.toToken;
-  if (!token) return;
-  const prefix = side === 'from' ? 'bridgeFrom' : 'bridgeTo';
-  const chainId = side === 'from' ? Bridge.fromChain : Bridge.toChain;
-  $(`#${prefix}TokenSymbol`).textContent = token.symbol;
-  const icon = $(`#${prefix}TokenIcon`);
-  const svg = getTokenIcon(token.symbol, chainId);
-  const blob = new Blob([svg], { type: 'image/svg+xml' });
-  icon.src = URL.createObjectURL(blob);
-  icon.style.display = 'block';
-}
-
-function updateBridgeBtn() {
-  const btn = $('#bridgeBtn');
-  if (!Wallet.address) { btn.textContent = 'Connect Wallet'; btn.disabled = false; return; }
-  if (!Bridge.fromToken || !Bridge.toToken) { btn.textContent = 'Select Token'; btn.disabled = true; return; }
-  if (!$('#bridgeFromAmount').value) { btn.textContent = 'Enter Amount'; btn.disabled = true; return; }
-  btn.textContent = `Bridge ${Bridge.fromToken.symbol} (${NETWORKS[Bridge.fromChain]?.short}) → ${Bridge.toToken.symbol} (${NETWORKS[Bridge.toChain]?.short})`;
-  btn.disabled = false;
-}
-
-// ─── Token Modal ───
-function initModals() {
-  $('#tokenModalClose').addEventListener('click', closeTokenModal);
-  $('#tokenModal').addEventListener('click', (e) => {
-    if (e.target === $('#tokenModal')) closeTokenModal();
-  });
-  $('#networkModalClose').addEventListener('click', closeNetworkModal);
-  $('#networkModal').addEventListener('click', (e) => {
-    if (e.target === $('#networkModal')) closeNetworkModal();
-  });
-  $('#tokenSearch').addEventListener('input', filterTokens);
-  $('#netSearch').addEventListener('input', filterNetworks);
-}
-
-function openTokenModal(target) {
-  currentModal = target;
-  const chainId = target === 'fromToken' ? Swap.fromChain : (target === 'toToken' ? Swap.toChain : (target === 'bridgeFromToken' ? Bridge.fromChain : Bridge.toChain));
-  const tokens = getTokensForChain(chainId);
-  renderTokenList(tokens);
-  $('#tokenModal').style.display = 'flex';
-  $('#tokenSearch').value = '';
-  $('#tokenSearch').focus();
-}
-
-function closeTokenModal() { $('#tokenModal').style.display = 'none'; }
-
-function renderTokenList(tokens) {
-  const list = $('#tokenList');
-  const chainId = currentModal === 'toToken' ? Swap.toChain : Swap.fromChain;
-  list.innerHTML = tokens.map((t) => `
-    <div class="token-item" data-address="${t.address}">
-      <span class="token-icon-inline">${getTokenIcon(t.symbol, chainId)}</span>
-      <div class="token-item-info">
-        <div class="token-item-name">${t.symbol}</div>
-        <div class="token-item-chain">${t.name}</div>
-      </div>
-    </div>
-  `).join('');
-
-  list.querySelectorAll('.token-item').forEach((item) => {
-    item.addEventListener('click', () => {
-      const addr = item.dataset.address;
-      const token = tokens.find((t) => t.address === addr);
-      if (!token) return;
-
-      if (currentModal === 'fromToken') { Swap.fromToken = token; updateTokenUI('from'); }
-      else if (currentModal === 'toToken') { Swap.toToken = token; updateTokenUI('to'); }
-      else if (currentModal === 'bridgeFromToken') { Bridge.fromToken = token; updateBridgeTokenUI('from'); }
-      else if (currentModal === 'bridgeToToken') { Bridge.toToken = token; updateBridgeTokenUI('to'); }
-
-      closeTokenModal();
-      // Re-trigger quote
-      const amountInput = (currentModal.includes('bridge')) ? $('#bridgeFromAmount') : $('#fromAmount');
-      amountInput.dispatchEvent(new Event('input'));
-    });
-  });
-}
-
-function filterTokens() {
-  const q = $('#tokenSearch').value.toLowerCase();
-  const items = $('#tokenList').querySelectorAll('.token-item');
-  items.forEach((item) => {
-    const text = item.textContent.toLowerCase();
-    item.style.display = text.includes(q) ? 'flex' : 'none';
-  });
-}
-
-// ─── Network Modal ───
-function openNetworkModal(target) {
-  modalNetworkTarget = target;
-  const nets = Object.values(NETWORKS);
-  renderNetworkGrid(nets);
-  $('#networkModal').style.display = 'flex';
-  $('#netSearch').value = '';
-}
-
-function closeNetworkModal() { $('#networkModal').style.display = 'none'; }
-
-function renderNetworkGrid(nets) {
-  const grid = $('#networkGrid');
-  grid.innerHTML = nets.map((n) => `
-    <div class="network-item" data-id="${n.id}">
-      <span class="network-icon-inline">${getNetworkIcon(n.name)}</span>
-      <span>${n.name}</span>
-    </div>
-  `).join('');
-
-  grid.querySelectorAll('.network-item').forEach((item) => {
-    item.addEventListener('click', () => {
-      const id = parseInt(item.dataset.id);
-      const net = NETWORKS[id];
-      if (!net) return;
-
-      if (modalNetworkTarget === 'swap') {
-        Swap.fromChain = id;
-        Swap.toChain = id;
-        $('#networkName').textContent = net.name;
-        // Use inline SVG icon
-        const netSvg = getNetworkIcon(net.name);
-        $('#networkIcon').src = URL.createObjectURL(new Blob([netSvg], { type: 'image/svg+xml' }));
-        // Reset tokens for new chain
-        const tokens = getTokensForChain(id);
-        Swap.fromToken = tokens[0];
-        Swap.toToken = tokens[1];
-        updateTokenUI('from');
-        updateTokenUI('to');
-      } else if (modalNetworkTarget === 'bridgeFrom') {
-        Bridge.fromChain = id;
-        $('#bridgeFromName').textContent = net.name;
-        $('#bridgeFromIcon').src = URL.createObjectURL(new Blob([getNetworkIcon(net.name)], { type: 'image/svg+xml' }));
-        const tokens = getTokensForChain(id);
-        Bridge.fromToken = tokens[0];
-        updateBridgeTokenUI('from');
-      } else if (modalNetworkTarget === 'bridgeTo') {
-        Bridge.toChain = id;
-        $('#bridgeToName').textContent = net.name;
-        $('#bridgeToIcon').src = URL.createObjectURL(new Blob([getNetworkIcon(net.name)], { type: 'image/svg+xml' }));
-        const tokens = getTokensForChain(id);
-        Bridge.toToken = tokens[0];
-        updateBridgeTokenUI('to');
-      }
-
-      closeNetworkModal();
-      // Re-trigger quote
-      const amountInput = modalNetworkTarget === 'swap' ? $('#fromAmount') : $('#bridgeFromAmount');
-      amountInput.dispatchEvent(new Event('input'));
-    });
-  });
-}
-
-function filterNetworks() {
-  const q = $('#netSearch').value.toLowerCase();
-  const items = $('#networkGrid').querySelectorAll('.network-item');
-  items.forEach((item) => {
-    item.style.display = item.textContent.toLowerCase().includes(q) ? '' : 'none';
-  });
-}
-
-// ─── Settings ───
-function initSettings() {
-  $('#swapSettingsBtn').addEventListener('click', () => {
-    $('#settingsModal').style.display = 'flex';
-  });
-  $('#settingsModalClose').addEventListener('click', () => {
-    $('#settingsModal').style.display = 'none';
-  });
-  $('#settingsModal').addEventListener('click', (e) => {
-    if (e.target === $('#settingsModal')) $('#settingsModal').style.display = 'none';
-  });
-  $$('.slippage-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      $$('.slippage-btn').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      Swap.slippage = parseFloat(btn.dataset.val);
-      $('#customSlippage').value = '';
-    });
-  });
-  $('#customSlippage').addEventListener('input', () => {
-    const val = parseFloat($('#customSlippage').value);
-    if (val > 0 && val <= 50) {
-      $$('.slippage-btn').forEach((b) => b.classList.remove('active'));
-      Swap.slippage = val;
-    }
-  });
-}
-
-// ─── Balance Updates ───
-async function updateBalances() {
-  if (!Wallet.address) return;
-  await Wallet.updateBalance();
-
-  // For swap from token
-  if (Swap.fromToken) {
-    if (Swap.fromToken.symbol === NETWORKS[Swap.fromChain]?.native.symbol) {
-      $('#fromBalance').textContent = parseFloat(Wallet.balance).toFixed(4);
-    } else {
-      // ERC20 balance via contract call
-      try {
-        const erc20 = new ethers.Contract(Swap.fromToken.address, ['function balanceOf(address) view returns (uint256)'], Wallet.provider);
-        const bal = await erc20.balanceOf(Wallet.address);
-        $('#fromBalance').textContent = formatAmount(bal, Swap.fromToken.decimals);
-      } catch { $('#fromBalance').textContent = '—'; }
-    }
-  }
-
-  // For bridge from token
+function updateBridgeUI() {
   if (Bridge.fromToken) {
-    if (Bridge.fromToken.symbol === NETWORKS[Bridge.fromChain]?.native.symbol) {
-      $('#bridgeFromBalance').textContent = parseFloat(Wallet.balance).toFixed(4);
-    } else {
-      try {
-        const erc20 = new ethers.Contract(Bridge.fromToken.address, ['function balanceOf(address) view returns (uint256)'], Wallet.provider);
-        const bal = await erc20.balanceOf(Wallet.address);
-        $('#bridgeFromBalance').textContent = formatAmount(bal, Bridge.fromToken.decimals);
-      } catch { $('#bridgeFromBalance').textContent = '—'; }
-    }
+    $('#bridgeFromSymbol').textContent = Bridge.fromToken.symbol;
+    $('#bridgeFromIcon').innerHTML = getTokenIcon(Bridge.fromToken.symbol);
   }
-}
-
-function updateNetworkUI() {
-  if (Wallet.chainId) {
-    const net = NETWORKS[Wallet.chainId];
-    if (net) {
-      $('#networkName').textContent = net.name;
-      $('#networkIcon').src = net.icon;
-    }
+  if (Bridge.toToken) {
+    $('#bridgeToSymbol').textContent = Bridge.toToken.symbol;
+    $('#bridgeToIcon').innerHTML = getTokenIcon(Bridge.toToken.symbol);
   }
 }
 
 // ─── Toast ───
-function showToast(msg, type = '') {
-  const t = $('#toast');
-  t.textContent = msg;
-  t.className = 'toast show' + (type ? ' ' + type : '');
-  clearTimeout(t._timer);
-  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+function showToast(msg, type = 'info') {
+  const toast = $('#toast');
+  toast.textContent = msg;
+  toast.className = `toast show ${type}`;
+  setTimeout(() => toast.classList.remove('show'), 3000);
 }
 
-// ─── Utilities ───
+// ─── Util ───
 function debounce(fn, ms) {
-  let timer;
-  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
 }

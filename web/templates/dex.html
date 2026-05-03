@@ -2,289 +2,260 @@
 <html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>dex.ai — Swap & Bridge Across All Chains</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Arc DEX — Stablecoin Swap on Arc Network</title>
+    <meta name="description" content="Swap USDC seamlessly on Arc Network. The stablecoin-native blockchain.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/dex.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.9.0/ethers.umd.min.js"></script>
+    <!-- Arc Logo (inline) -->
+    <style>
+      .arc-logo-svg { width: 28px; height: 28px; }
+    </style>
 </head>
 <body>
+    <canvas id="bgCanvas"></canvas>
 
-<canvas id="bgCanvas"></canvas>
-
-<!-- ═══ NAV ═══ -->
-<nav class="nav">
-    <div class="nav-inner">
-        <a href="/" class="logo">
-            <svg width="32" height="32" viewBox="0 0 40 40">
-                <defs><linearGradient id="lg" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs>
-                <rect x="4" y="4" width="32" height="32" rx="8" fill="url(#lg)" opacity="0.15"/>
-                <path d="M12 20h16M20 12v16" stroke="url(#lg)" stroke-width="2.5" stroke-linecap="round"/>
+    <header class="topbar">
+        <div class="topbar-left">
+            <svg class="arc-logo-svg" viewBox="0 0 32 32">
+                <defs>
+                    <linearGradient id="arcLogoG" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stop-color="#6366f1"/>
+                        <stop offset="50%" stop-color="#8b5cf6"/>
+                        <stop offset="100%" stop-color="#a855f7"/>
+                    </linearGradient>
+                </defs>
+                <circle cx="16" cy="16" r="16" fill="url(#arcLogoG)"/>
+                <path d="M11 22V10h3.5l4.5 6.5L23.5 10H27v12h-3V15l-4 6h-3l-4-6v7z" fill="#fff"/>
             </svg>
-            <span>dex<span style="color:#6366f1">.ai</span></span>
-        </a>
-        <div class="nav-links">
-            <a href="#" class="nav-link active" data-page="swap">Swap</a>
-            <a href="#" class="nav-link" data-page="bridge">Bridge</a>
-            <button class="btn-connect" id="connectBtn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9"/></svg>
-                <span id="connectText">Connect</span>
-            </button>
+            <span class="logo-text">arc<span class="logo-dot">.dex</span></span>
         </div>
-    </div>
-</nav>
+        <button id="connectBtn" class="connect-btn">Connect Wallet</button>
+    </header>
 
-<!-- ═══ MAIN ═══ -->
-<main class="main">
+    <main class="main">
+        <!-- ═══ SWAP PAGE ═══ -->
+        <div id="page-swap" class="page active">
+            <div class="card">
+                <div class="card-head">
+                    <h2>Swap</h2>
+                    <div class="arc-badge">Arc Testnet</div>
+                </div>
 
-    <!-- ═══ SWAP PAGE ═══ -->
-    <div class="page active" id="page-swap">
-        <div class="swap-card">
-            <div class="card-header">
-                <h2>Swap</h2>
-                <button class="settings-btn" id="swapSettingsBtn">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-3.66-1.41 2 2 0 01.58-1.41l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-                </button>
-            </div>
+                <!-- Network -->
+                <div class="network-pill">
+                    <span class="network-icon-inline" id="arcNetIcon"></span>
+                    <span>Arc Testnet</span>
+                    <span class="chain-tag">5042002</span>
+                </div>
 
-            <!-- Network Selector -->
-            <div class="network-selector">
-                <button class="network-btn" id="networkBtn">
-                    <img id="networkIcon" src="https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/ethereum.svg" width="20" height="20">
-                    <span id="networkName">Ethereum</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-                </button>
-                <div class="network-dropdown" id="networkDropdown" style="display:none">
-                    <div class="network-search">
-                        <input type="text" id="networkSearch" placeholder="Search network...">
+                <!-- You Pay -->
+                <div class="input-section">
+                    <div class="input-label-row">
+                        <span class="label">You pay</span>
+                        <span class="balance-label">Balance: <span id="arcBalance">0.00</span></span>
                     </div>
-                    <div class="network-list" id="networkList"></div>
+                    <div class="input-row">
+                        <input id="fromAmount" type="text" inputmode="decimal" placeholder="0.0" class="amount-input">
+                        <div class="token-select">
+                            <span class="token-icon-inline" id="fromIcon"></span>
+                            <span id="fromSymbol">USDC</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Swap direction -->
+                <div class="swap-arrow" id="swapDirection">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+                </div>
+
+                <!-- You Receive -->
+                <div class="input-section">
+                    <div class="input-label-row">
+                        <span class="label">You receive</span>
+                        <span class="label" id="receiveAmount">0.00</span>
+                    </div>
+                    <div class="input-row">
+                        <input id="toAmount" type="text" inputmode="decimal" placeholder="0.0" class="amount-input" readonly>
+                        <div class="token-select">
+                            <span class="token-icon-inline" id="toIcon"></span>
+                            <span id="toSymbol">USDC</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Route info -->
+                <div class="route-info">
+                    <span>Gas: ~150,000</span>
+                    <span>•</span>
+                    <span>Arc DEX Router</span>
+                </div>
+
+                <!-- Swap button -->
+                <button id="swapBtn" class="action-btn" disabled>Connect Wallet</button>
+            </div>
+        </div>
+
+        <!-- ═══ BRIDGE PAGE ═══ -->
+        <div id="page-bridge" class="page">
+            <div class="card">
+                <div class="card-head">
+                    <h2>Bridge to Arc</h2>
+                    <a href="https://bridge.arc.network" target="_blank" class="ext-link">Open Bridge ↗</a>
+                </div>
+
+                <!-- Source chain selector -->
+                <div class="source-chains">
+                    <div class="chain-chip active" data-chain="1">Ethereum</div>
+                    <div class="chain-chip" data-chain="42161">Arbitrum</div>
+                    <div class="chain-chip" data-chain="10">Optimism</div>
+                    <div class="chain-chip" data-chain="8453">Base</div>
+                </div>
+
+                <!-- From -->
+                <div class="input-section">
+                    <div class="input-label-row">
+                        <span class="label">From</span>
+                    </div>
+                    <div class="input-row">
+                        <input id="bridgeFromAmount" type="text" inputmode="decimal" placeholder="0.0" class="amount-input">
+                        <div class="token-select">
+                            <span class="token-icon-inline" id="bridgeFromIcon"></span>
+                            <span id="bridgeFromSymbol">USDC</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="bridge-arrow">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m0 0l6-6m-6 6l-6-6"/></svg>
+                </div>
+
+                <!-- To Arc -->
+                <div class="input-section">
+                    <div class="input-label-row">
+                        <span class="label">To Arc</span>
+                    </div>
+                    <div class="input-row">
+                        <input id="bridgeToAmount" type="text" inputmode="decimal" placeholder="0.0" class="amount-input" readonly>
+                        <div class="token-select">
+                            <span class="token-icon-inline" id="bridgeToIcon"></span>
+                            <span id="bridgeToSymbol">USDC</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quote info -->
+                <div id="bridgeQuoteInfo" class="quote-info" style="display:none"></div>
+
+                <!-- Bridge button -->
+                <button id="bridgeBtn" class="action-btn">Bridge to Arc</button>
+
+                <!-- Info -->
+                <div class="info-box">
+                    <p>🌉 <strong>Arc Native Bridge</strong> — Transfer USDC from L1/L2 to Arc Testnet</p>
+                    <p>⏱ Estimated time: 2-5 minutes</p>
+                    <p>🔗 <a href="https://testnet.arcscan.app" target="_blank">Arc Explorer ↗</a></p>
                 </div>
             </div>
+        </div>
 
-            <!-- From Token -->
-            <div class="token-input-group">
-                <div class="token-input-header">
-                    <span class="token-input-label">You pay</span>
-                    <span class="token-balance" id="fromBalance">0.00</span>
+        <!-- ═══ ABOUT PAGE ═══ -->
+        <div id="page-about" class="page">
+            <div class="card about-card">
+                <div class="about-logo">
+                    <svg width="64" height="64" viewBox="0 0 32 32">
+                        <defs><linearGradient id="aG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="50%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#a855f7"/></linearGradient></defs>
+                        <circle cx="16" cy="16" r="16" fill="url(#aG)"/>
+                        <path d="M11 22V10h3.5l4.5 6.5L23.5 10H27v12h-3V15l-4 6h-3l-4-6v7z" fill="#fff"/>
+                    </svg>
                 </div>
-                <div class="token-input-row">
-                    <input type="text" class="token-amount" id="fromAmount" placeholder="0.0" inputmode="decimal">
-                    <button class="token-select-btn" id="fromTokenBtn">
-                        <img id="fromTokenIcon" src="" style="display:none" width="24" height="24">
-                        <span id="fromTokenSymbol">Select</span>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-                    </button>
+                <h1 class="about-title">Arc Network</h1>
+                <p class="about-subtitle">The Stablecoin Blockchain</p>
+                
+                <div class="about-features">
+                    <div class="feature-card">
+                        <div class="feature-icon">💰</div>
+                        <div class="feature-title">Gas in Stablecoin</div>
+                        <div class="feature-desc">Pay gas in USDC — no volatile fees</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">⚡</div>
+                        <div class="feature-title">Unified Balance</div>
+                        <div class="feature-desc">One USDC balance across all Arc apps</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🔗</div>
+                        <div class="feature-title">EVM Compatible</div>
+                        <div class="feature-desc">Deploy Solidity contracts seamlessly</div>
+                    </div>
+                    <div class="feature-card">
+                        <div class="feature-icon">🌉</div>
+                        <div class="feature-title">Native Bridge</div>
+                        <div class="feature-desc">Bridge USDC from Ethereum, Arbitrum, Base & more</div>
+                    </div>
+                </div>
+
+                <div class="about-links">
+                    <a href="https://docs.arc.network" target="_blank">📚 Docs</a>
+                    <a href="https://faucet.arc.network" target="_blank">🚰 Faucet</a>
+                    <a href="https://testnet.arcscan.app" target="_blank">🔍 Explorer</a>
+                    <a href="https://bridge.arc.network" target="_blank">🌉 Bridge</a>
                 </div>
             </div>
+        </div>
+    </main>
 
-            <!-- Swap Direction -->
-            <div class="swap-direction">
-                <button class="swap-direction-btn" id="swapDirectionBtn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
-                </button>
+    <!-- ═══ Bottom Nav ═══ -->
+    <nav class="bottombar">
+        <a class="nav-link active" data-page="swap">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+            <span>Swap</span>
+        </a>
+        <a class="nav-link" data-page="bridge">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14m0 0l6-6m-6 6l-6-6"/></svg>
+            <span>Bridge</span>
+        </a>
+        <a class="nav-link" data-page="about">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4m0-4h.01"/></svg>
+            <span>About</span>
+        </a>
+    </nav>
+
+    <!-- ═══ Wallet Drawer ═══ -->
+    <div id="walletDrawer" class="drawer-overlay">
+        <div class="drawer">
+            <div class="drawer-header">
+                <h3>Wallet</h3>
+                <button id="walletDrawerClose" class="close-btn">✕</button>
             </div>
-
-            <!-- To Token -->
-            <div class="token-input-group">
-                <div class="token-input-header">
-                    <span class="token-input-label">You receive</span>
-                    <span class="token-balance" id="toBalance">0.00</span>
+            <div class="drawer-empty" style="display:none">
+                <p>Connect your wallet to start</p>
+            </div>
+            <div class="drawer-content">
+                <div class="wallet-addr" id="walletAddr">—</div>
+                <div class="wallet-bal">Balance: <span id="walletBalance">—</span></div>
+                <div class="wallet-network">
+                    <span class="network-icon-inline" id="walletNetIcon"></span>
+                    Arc Testnet
                 </div>
-                <div class="token-input-row">
-                    <input type="text" class="token-amount" id="toAmount" placeholder="0.0" readonly>
-                    <button class="token-select-btn" id="toTokenBtn">
-                        <img id="toTokenIcon" src="" style="display:none" width="24" height="24">
-                        <span id="toTokenSymbol">Select</span>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-                    </button>
-                </div>
+                <button id="disconnectBtn" class="disconnect-btn">Disconnect</button>
             </div>
-
-            <!-- Quote Info -->
-            <div class="quote-info" id="quoteInfo" style="display:none">
-                <div class="quote-row"><span>Rate</span><span id="quoteRate">—</span></div>
-                <div class="quote-row"><span>Route</span><span id="quoteRoute">—</span></div>
-                <div class="quote-row"><span>Slippage</span><span id="quoteSlippage">0.5%</span></div>
-            </div>
-
-            <!-- Action Button -->
-            <button class="action-btn" id="swapBtn">
-                Enter Amount
-            </button>
         </div>
     </div>
 
-    <!-- ═══ BRIDGE PAGE ═══ -->
-    <div class="page" id="page-bridge">
-        <div class="swap-card">
-            <div class="card-header">
-                <h2>Bridge</h2>
-                <div class="bridge-providers">
-                    <span class="provider-badge active" data-provider="lifi">Li.Fi</span>
-                    <span class="provider-badge" data-provider="relay">Relay</span>
-                </div>
-            </div>
+    <!-- ═══ Toast ═══ -->
+    <div id="toast" class="toast"></div>
 
-            <!-- Network Selector -->
-            <div class="network-selector">
-                <button class="network-btn" id="bridgeFromNetworkBtn">
-                    <img id="bridgeFromIcon" src="https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/ethereum.svg" width="20" height="20">
-                    <span id="bridgeFromName">Ethereum</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-                </button>
-                <div class="network-dropdown" id="bridgeFromDropdown" style="display:none">
-                    <div class="network-list" id="bridgeFromList"></div>
-                </div>
-            </div>
-
-            <!-- From Token -->
-            <div class="token-input-group">
-                <div class="token-input-header">
-                    <span class="token-input-label">From</span>
-                    <span class="token-balance" id="bridgeFromBalance">0.00</span>
-                </div>
-                <div class="token-input-row">
-                    <input type="text" class="token-amount" id="bridgeFromAmount" placeholder="0.0" inputmode="decimal">
-                    <button class="token-select-btn" id="bridgeFromTokenBtn">
-                        <img id="bridgeFromTokenIcon" src="" style="display:none" width="24" height="24">
-                        <span id="bridgeFromTokenSymbol">Select</span>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Swap Direction -->
-            <div class="swap-direction">
-                <button class="swap-direction-btn" id="bridgeSwapDirBtn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
-                </button>
-            </div>
-
-            <!-- To Network -->
-            <div class="network-selector">
-                <button class="network-btn" id="bridgeToNetworkBtn">
-                    <img id="bridgeToIcon" src="https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/arbitrum.svg" width="20" height="20">
-                    <span id="bridgeToName">Arbitrum</span>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-                </button>
-                <div class="network-dropdown" id="bridgeToDropdown" style="display:none">
-                    <div class="network-list" id="bridgeToList"></div>
-                </div>
-            </div>
-
-            <!-- To Token -->
-            <div class="token-input-group">
-                <div class="token-input-header">
-                    <span class="token-input-label">To</span>
-                    <span class="token-balance" id="bridgeToBalance">0.00</span>
-                </div>
-                <div class="token-input-row">
-                    <input type="text" class="token-amount" id="bridgeToAmount" placeholder="0.0" readonly>
-                    <button class="token-select-btn" id="bridgeToTokenBtn">
-                        <img id="bridgeToTokenIcon" src="" style="display:none" width="24" height="24">
-                        <span id="bridgeToTokenSymbol">Select</span>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-                    </button>
-                </div>
-            </div>
-
-            <!-- Bridge Quote Info -->
-            <div class="quote-info" id="bridgeQuoteInfo" style="display:none">
-                <div class="quote-row"><span>Provider</span><span id="bridgeQuoteProvider">Li.Fi</span></div>
-                <div class="quote-row"><span>Est. Time</span><span id="bridgeQuoteTime">~2 min</span></div>
-                <div class="quote-row"><span>Fee</span><span id="bridgeQuoteFee">—</span></div>
-            </div>
-
-            <button class="action-btn" id="bridgeBtn">Enter Amount</button>
-        </div>
-    </div>
-
-</main>
-
-<!-- ═══ TOKEN SELECT MODAL ═══ -->
-<div class="modal-overlay" id="tokenModal" style="display:none">
-    <div class="modal token-modal">
-        <div class="modal-header">
-            <h3>Select Token</h3>
-            <button class="modal-close" id="tokenModalClose">×</button>
-        </div>
-        <div class="modal-body">
-            <input type="text" class="token-search" id="tokenSearch" placeholder="Search token name or paste address...">
-            <div class="token-list" id="tokenList"></div>
-        </div>
-    </div>
-</div>
-
-<!-- ═══ NETWORK MODAL ═══ -->
-<div class="modal-overlay" id="networkModal" style="display:none">
-    <div class="modal network-modal">
-        <div class="modal-header">
-            <h3>Select Network</h3>
-            <button class="modal-close" id="networkModalClose">×</button>
-        </div>
-        <div class="modal-body">
-            <input type="text" class="token-search" id="netSearch" placeholder="Search network...">
-            <div class="network-grid" id="networkGrid"></div>
-        </div>
-    </div>
-</div>
-
-<!-- ═══ SETTINGS MODAL ═══ -->
-<div class="modal-overlay" id="settingsModal" style="display:none">
-    <div class="modal settings-modal">
-        <div class="modal-header">
-            <h3>Settings</h3>
-            <button class="modal-close" id="settingsModalClose">×</button>
-        </div>
-        <div class="modal-body">
-            <div class="setting-group">
-                <label>Slippage Tolerance</label>
-                <div class="slippage-options">
-                    <button class="slippage-btn" data-val="0.1">0.1%</button>
-                    <button class="slippage-btn active" data-val="0.5">0.5%</button>
-                    <button class="slippage-btn" data-val="1">1%</button>
-                    <input type="number" class="slippage-input" id="customSlippage" placeholder="Custom">
-                </div>
-            </div>
-            <div class="setting-group">
-                <label>Transaction Deadline</label>
-                <div class="deadline-input">
-                    <input type="number" id="deadline" value="20" min="1" max="60">
-                    <span>minutes</span>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ═══ WALLET DRAWER ═══ -->
-<div class="drawer-overlay" id="walletDrawer" style="display:none">
-    <div class="drawer">
-        <div class="drawer-header">
-            <h3>Wallet</h3>
-            <button class="modal-close" id="walletDrawerClose">×</button>
-        </div>
-        <div class="drawer-body">
-            <div class="wallet-address" id="walletAddress"></div>
-            <div class="wallet-balance" id="walletBalance"></div>
-            <div class="wallet-network" id="walletNetwork"></div>
-            <button class="disconnect-btn" id="disconnectBtn">Disconnect</button>
-        </div>
-    </div>
-</div>
-
-<!-- ═══ TOAST ═══ -->
-<div id="toast" class="toast"></div>
-
-<script src="/static/js/icons.js"></script>
-<script src="/static/js/networks.js"></script>
-<script src="/static/js/tokens.js"></script>
-<script src="/static/js/wallet.js"></script>
-<script src="/static/js/swap.js"></script>
-<script src="/static/js/bridge.js"></script>
-<script src="/static/js/app.js"></script>
-<script src="/static/js/canvas.js"></script>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.umd.min.js"></script>
+    <script src="/static/js/icons.js"></script>
+    <script src="/static/js/networks.js"></script>
+    <script src="/static/js/swap.js"></script>
+    <script src="/static/js/bridge.js"></script>
+    <script src="/static/js/canvas.js"></script>
+    <script src="/static/js/app.js"></script>
 </body>
 </html>

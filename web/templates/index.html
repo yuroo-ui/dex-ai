@@ -1,239 +1,1263 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>dex-ai — Agent Skill Marketplace</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/css/styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArcDEX — Decentralized Exchange on Arc Network</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #000000;
+    --bg-elev: #0A0A0A;
+    --bg-card: #0F0F0F;
+    --hairline: #1F1F1F;
+    --text: #FFFFFF;
+    --text-muted: #A3A3A3;
+    --text-faint: #525252;
+    --accent: #00E5FF;
+    --accent-glow: rgba(0, 229, 255, 0.4);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Geist', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+    padding: 16px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .nav-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 18px;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  .nav-logo svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  .nav-links {
+    display: flex;
+    gap: 32px;
+    align-items: center;
+  }
+
+  .nav-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 200ms;
+  }
+
+  .nav-links a:hover { color: var(--text); }
+
+  .nav-cta {
+    background: var(--accent) !important;
+    color: var(--bg) !important;
+    padding: 10px 20px;
+    border-radius: 999px;
+    font-weight: 600;
+    transition: box-shadow 300ms !important;
+  }
+
+  .nav-cta:hover {
+    box-shadow: 0 0 24px var(--accent-glow), 0 0 8px var(--accent-glow);
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    min-height: 100dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  #hero-canvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+  }
+
+  .hero-overlay {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(circle at 50% 50%, transparent 0%, var(--bg) 70%),
+      linear-gradient(180deg, transparent 50%, var(--bg) 100%);
+    z-index: 1;
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    max-width: 900px;
+    padding: 0 32px;
+  }
+
+  .kicker {
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .kicker::before {
+    content: '//';
+    color: var(--text-faint);
+  }
+
+  .hero h1 {
+    font-size: clamp(48px, 8vw, 96px);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    line-height: 1;
+    margin-bottom: 24px;
+  }
+
+  .hero h1 .glow {
+    color: var(--accent);
+    text-shadow: 0 0 40px var(--accent-glow);
+  }
+
+  .hero p {
+    font-size: 18px;
+    color: var(--text-muted);
+    max-width: 560px;
+    margin: 0 auto 40px;
+    line-height: 1.6;
+  }
+
+  .hero-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .btn-neon {
+    background: var(--accent);
+    color: var(--bg);
+    font-weight: 600;
+    font-size: 15px;
+    padding: 14px 28px;
+    border-radius: 999px;
+    border: none;
+    cursor: pointer;
+    transition: box-shadow 300ms, transform 200ms;
+    text-decoration: none;
+  }
+
+  .btn-neon:hover {
+    box-shadow: 0 0 32px var(--accent-glow), 0 0 8px var(--accent-glow);
+    transform: translateY(-1px);
+  }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    padding: 14px 28px;
+    font-weight: 500;
+    font-size: 15px;
+    cursor: pointer;
+    transition: border-color 300ms, color 300ms;
+    text-decoration: none;
+  }
+
+  .btn-ghost:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── STATS BAR ── */
+  .stats-bar {
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+    background: var(--bg-elev);
+    padding: 32px;
+  }
+
+  .stats-grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+
+  .stat-item {
+    text-align: center;
+  }
+
+  .stat-value {
+    font-size: clamp(28px, 3vw, 40px);
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.03em;
+  }
+
+  .stat-value .accent { color: var(--accent); }
+
+  .stat-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-top: 6px;
+  }
+
+  /* ── MARQUEE ── */
+  .marquee-wrapper {
+    overflow: hidden;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--hairline);
+    background: var(--bg);
+  }
+
+  .marquee-track {
+    display: flex;
+    gap: 48px;
+    animation: marquee 40s linear infinite;
+    width: max-content;
+  }
+
+  .marquee-track span {
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    white-space: nowrap;
+  }
+
+  .marquee-track span.accent { color: var(--accent); }
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  /* ── SWAP PREVIEW ── */
+  .swap-section {
+    padding: 120px 32px;
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+  }
+
+  .swap-text .section-kicker {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .swap-text .section-kicker::before {
+    content: '//';
+    color: var(--text-faint);
+  }
+
+  .swap-text h2 {
+    font-size: clamp(32px, 4vw, 48px);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+    margin-bottom: 20px;
+  }
+
+  .swap-text p {
+    color: var(--text-muted);
+    font-size: 16px;
+    line-height: 1.7;
+    margin-bottom: 32px;
+  }
+
+  .swap-features {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .swap-feature {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .swap-feature .dot {
+    width: 6px;
+    height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 0 8px var(--accent-glow);
+  }
+
+  /* ── SWAP CARD ── */
+  .swap-card-wrapper {
+    display: flex;
+    justify-content: center;
+  }
+
+  .swap-card {
+    width: 100%;
+    max-width: 400px;
+    background: var(--bg-card);
+    border: 1px solid var(--hairline);
+    border-radius: 16px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .swap-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 12%;
+    right: 12%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,229,255,0.3), transparent);
+  }
+
+  .swap-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .swap-card-title {
+    font-weight: 600;
+    font-size: 16px;
+  }
+
+  .swap-card-settings {
+    color: var(--text-faint);
+    cursor: pointer;
+    transition: color 200ms;
+  }
+
+  .swap-card-settings:hover { color: var(--text); }
+
+  .swap-input-group {
+    background: var(--bg-elev);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 8px;
+  }
+
+  .swap-input-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 8px;
+  }
+
+  .swap-input-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .swap-input {
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: 'Geist', sans-serif;
+    font-size: 28px;
+    font-weight: 600;
+    width: 60%;
+    outline: none;
+    letter-spacing: -0.02em;
+  }
+
+  .swap-input::placeholder { color: var(--text-faint); }
+
+  .swap-token {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-card);
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    padding: 8px 14px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  .token-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--bg);
+  }
+
+  .token-icon.usdc { background: #2775CA; }
+
+  .swap-balance {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+    margin-top: 8px;
+  }
+
+  .swap-arrow {
+    display: flex;
+    justify-content: center;
+    margin: -4px 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .swap-arrow-btn {
+    width: 40px;
+    height: 40px;
+    background: var(--bg-card);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: border-color 200ms, color 200ms;
+  }
+
+  .swap-arrow-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .swap-rate {
+    text-align: center;
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    color: var(--text-faint);
+    margin: 16px 0;
+  }
+
+  .swap-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 16px;
+    cursor: pointer;
+    transition: box-shadow 300ms;
+  }
+
+  .swap-btn:hover {
+    box-shadow: 0 0 32px var(--accent-glow);
+  }
+
+  /* ── FEATURES ── */
+  .features-section {
+    padding: 120px 32px;
+    max-width: 1280px;
+    margin: 0 auto;
+  }
+
+  .features-header {
+    margin-bottom: 64px;
+  }
+
+  .features-header .section-kicker {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .features-header .section-kicker::before {
+    content: '//';
+    color: var(--text-faint);
+  }
+
+  .features-header h2 {
+    font-size: clamp(32px, 4vw, 48px);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: 7fr 5fr;
+    grid-template-rows: auto auto;
+    gap: 16px;
+  }
+
+  .feature-card {
+    background: var(--bg-card);
+    border: 1px solid var(--hairline);
+    border-radius: 12px;
+    padding: 32px;
+    transition: border-color 300ms, transform 300ms;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .feature-card:hover {
+    border-color: var(--accent);
+    transform: scale(1.01);
+  }
+
+  .feature-card.big {
+    grid-row: span 2;
+  }
+
+  .feature-num {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+
+  .feature-card h3 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 12px;
+    letter-spacing: -0.02em;
+  }
+
+  .feature-card p {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .feature-visual {
+    margin-top: 24px;
+    background: var(--bg-elev);
+    border-radius: 8px;
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--hairline);
+  }
+
+  .feature-visual svg {
+    width: 64px;
+    height: 64px;
+    opacity: 0.4;
+  }
+
+  .feature-card.big .feature-visual {
+    height: 220px;
+  }
+
+  /* ── CHAIN INFO ── */
+  .chain-section {
+    padding: 120px 32px;
+    background: var(--bg-elev);
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .chain-grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+  }
+
+  .chain-text .section-kicker {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .chain-text .section-kicker::before {
+    content: '//';
+    color: var(--text-faint);
+  }
+
+  .chain-text h2 {
+    font-size: clamp(28px, 3vw, 40px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    margin-bottom: 20px;
+  }
+
+  .chain-text p {
+    color: var(--text-muted);
+    font-size: 15px;
+    line-height: 1.7;
+    margin-bottom: 32px;
+  }
+
+  .chain-specs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .spec-item {
+    background: var(--bg-card);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    padding: 16px;
+  }
+
+  .spec-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 6px;
+  }
+
+  .spec-value {
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  .spec-value.mono {
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  /* ── CONTRACTS ── */
+  .contracts-visual {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .contract-card {
+    background: var(--bg-card);
+    border: 1px solid var(--hairline);
+    border-radius: 10px;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: border-color 300ms;
+  }
+
+  .contract-card:hover { border-color: var(--accent); }
+
+  .contract-name {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .contract-addr {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+
+  .contract-badge {
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    color: var(--text-muted);
+  }
+
+  /* ── CTA ── */
+  .cta-section {
+    padding: 160px 32px;
+    text-align: center;
+    position: relative;
+  }
+
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 600px;
+    background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+    opacity: 0.15;
+    filter: blur(80px);
+    pointer-events: none;
+  }
+
+  .cta-content {
+    position: relative;
+    z-index: 1;
+  }
+
+  .cta-content h2 {
+    font-size: clamp(36px, 5vw, 64px);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    margin-bottom: 20px;
+  }
+
+  .cta-content p {
+    color: var(--text-muted);
+    font-size: 16px;
+    margin-bottom: 40px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* ── GLOW DIVIDER ── */
+  .glow-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    box-shadow: 0 0 16px var(--accent-glow);
+    margin: 0;
+    opacity: 0.5;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 48px 32px;
+    border-top: 1px solid var(--hairline);
+  }
+
+  .footer-inner {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .footer-left svg { width: 20px; height: 20px; }
+
+  .footer-brand {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .footer-copy {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+
+  .footer-links {
+    display: flex;
+    gap: 24px;
+  }
+
+  .footer-links a {
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px;
+    color: var(--text-faint);
+    text-decoration: none;
+    transition: color 200ms;
+  }
+
+  .footer-links a:hover { color: var(--accent); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 768px) {
+    nav { padding: 12px 16px; }
+    .nav-links { gap: 16px; }
+    .nav-links a:not(.nav-cta) { display: none; }
+
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+
+    .swap-section,
+    .chain-grid {
+      grid-template-columns: 1fr;
+      gap: 48px;
+      padding: 80px 16px;
+    }
+
+    .features-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .feature-card.big { grid-row: auto; }
+
+    .chain-specs { grid-template-columns: 1fr; }
+
+    .footer-inner {
+      flex-direction: column;
+      gap: 24px;
+      text-align: center;
+    }
+
+    .footer-links { flex-wrap: wrap; justify-content: center; }
+  }
+
+  /* ── REVEAL ANIMATION ── */
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 600ms ease-out, transform 600ms ease-out;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+</style>
 </head>
 <body>
 
-<!-- ═══ CANVAS BACKGROUND ═══ -->
-<canvas id="bgCanvas"></canvas>
-
-<!-- ═══ NAV ═══ -->
-<nav class="nav">
-    <div class="nav-inner">
-        <a href="/" class="logo">
-            <div class="logo-icon">
-                <svg width="32" height="32" viewBox="0 0 40 40">
-                    <defs>
-                        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" style="stop-color:#6366f1"/>
-                            <stop offset="100%" style="stop-color:#a78bfa"/>
-                        </linearGradient>
-                    </defs>
-                    <rect x="4" y="4" width="32" height="32" rx="8" fill="url(#logoGrad)" opacity="0.15"/>
-                    <path d="M12 20h16M20 12v16" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round"/>
-                </svg>
-            </div>
-            <span class="logo-text">dex<span class="logo-accent">.ai</span></span>
-        </a>
-        <div class="nav-links">
-            <a href="#plugins" class="nav-link">Plugins</a>
-            <a href="#skills" class="nav-link">Skills</a>
-            <a href="https://github.com/yuroo-ui/dex-ai" target="_blank" class="nav-link">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:4px"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
-                GitHub
-            </a>
-            <button class="btn-connect" id="installBtn">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Install
-            </button>
-        </div>
-    </div>
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">
+    <svg viewBox="0 0 32 32" fill="none">
+      <path d="M16 2L28 8V24L16 30L4 24V8L16 2Z" stroke="var(--accent)" stroke-width="2"/>
+      <path d="M16 8L22 11V21L16 24L10 21V11L16 8Z" fill="var(--accent)"/>
+    </svg>
+    ArcDEX
+  </a>
+  <div class="nav-links">
+    <a href="#swap">Swap</a>
+    <a href="#features">Features</a>
+    <a href="#network">Network</a>
+    <a href="#" class="nav-cta">Launch App</a>
+  </div>
 </nav>
 
-<!-- ═══ HERO ═══ -->
+<!-- HERO -->
 <section class="hero">
-    <div class="hero-content">
-        <div class="hero-badge">
-            <span class="badge-dot"></span>
-            Open Source · Agent-to-Agent
-        </div>
-        <h1>Swap skills across<br><span class="gradient-text">every AI agent</span></h1>
-        <p class="hero-sub">One CLI command. 30+ chains. Unlimited skills. Install, discover, and share SKILL.md files across any coding agent.</p>
-
-        <!-- Swap-style Card -->
-        <div class="swap-card">
-            <div class="swap-card-header">
-                <span class="swap-label">Install Skill</span>
-                <button class="swap-settings" title="Options">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
-                </button>
-            </div>
-
-            <!-- From (Plugin) -->
-            <div class="swap-token">
-                <div class="swap-token-left">
-                    <span class="swap-token-label">From (Plugin)</span>
-                    <select id="fromPlugin" class="swap-select">
-                        <option value="dex-trading">dex-trading</option>
-                        <option value="dex-hooks">dex-hooks</option>
-                        <option value="dex-analytics">dex-analytics</option>
-                        <option value="dex-defi">dex-defi</option>
-                        <option value="dex-bridge">dex-bridge</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Swap Arrow -->
-            <div class="swap-arrow">
-                <div class="swap-arrow-btn">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
-                </div>
-            </div>
-
-            <!-- To (Skill) -->
-            <div class="swap-token">
-                <div class="swap-token-left">
-                    <span class="swap-token-label">To (Skill)</span>
-                    <select id="toSkill" class="swap-select">
-                        <option value="swap-integration">swap-integration</option>
-                        <option value="mev-protect">mev-protect</option>
-                        <option value="hook-developer">hook-developer</option>
-                        <option value="price-feed">price-feed</option>
-                        <option value="liquidity-manager">liquidity-manager</option>
-                        <option value="bridge-lifi">bridge-lifi</option>
-                        <option value="bridge-relay">bridge-relay</option>
-                        <option value="bridge-any">bridge-any</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- Install Button -->
-            <button class="swap-btn" id="swapInstallBtn">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                <span>Install Skill</span>
-            </button>
-        </div>
-
-        <!-- Command Preview -->
-        <div class="command-preview" id="commandPreview">
-            <code id="commandText">npx skills add yuroo-ui/dex-ai</code>
-            <button class="copy-btn" id="copyBtn" title="Copy">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-            </button>
-        </div>
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="kicker">Decentralized Exchange</div>
+    <h1>Trade on the<br><span class="glow">Arc Network</span></h1>
+    <p>Fast, gasless swaps powered by USDC. Zero slippage. On-chain liquidity. Built for autonomous agents and traders.</p>
+    <div class="hero-buttons">
+      <a href="#swap" class="btn-neon">Launch App</a>
+      <a href="#features" class="btn-ghost">Documentation →</a>
     </div>
+  </div>
 </section>
 
-<!-- ═══ STATS BAR ═══ -->
-<section class="stats-bar">
-    <div class="container">
-        <div class="stats-inner" id="statsBar">
-            <!-- populated by JS -->
-        </div>
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stats-grid">
+    <div class="stat-item reveal">
+      <div class="stat-value">$<span class="accent">12.4</span>M</div>
+      <div class="stat-label">Total Value Locked</div>
     </div>
-</section>
-
-<!-- ═══ PLUGINS ═══ -->
-<section class="section" id="plugins">
-    <div class="container">
-        <div class="section-header">
-            <div>
-                <h2>Plugins</h2>
-                <p class="section-desc">Modular skill packages for every DEX use case</p>
-            </div>
-            <div class="section-tabs">
-                <button class="tab active" data-filter="all">All</button>
-                <button class="tab" data-filter="trading">Trading</button>
-                <button class="tab" data-filter="bridge">Bridge</button>
-                <button class="tab" data-filter="defi">DeFi</button>
-                <button class="tab" data-filter="analytics">Analytics</button>
-            </div>
-        </div>
-        <div class="plugins-grid" id="pluginsGrid"></div>
+    <div class="stat-item reveal">
+      <div class="stat-value">$<span class="accent">8.7</span>M</div>
+      <div class="stat-label">24h Volume</div>
     </div>
-</section>
-
-<!-- ═══ SKILLS ═══ -->
-<section class="section section-dark" id="skills">
-    <div class="container">
-        <div class="section-header">
-            <div>
-                <h2>All Skills</h2>
-                <p class="section-desc">Browse and install individual skills</p>
-            </div>
-            <div class="search-mini">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input type="text" id="skillSearch" placeholder="Search skills...">
-            </div>
-        </div>
-        <div class="skills-table-wrap">
-            <table class="skills-table">
-                <thead>
-                    <tr>
-                        <th>Skill</th>
-                        <th>Plugin</th>
-                        <th>Description</th>
-                        <th>Install</th>
-                    </tr>
-                </thead>
-                <tbody id="skillsTable"></tbody>
-            </table>
-        </div>
-        <div class="skill-count"><span id="skillCount">0</span> skills available</div>
+    <div class="stat-item reveal">
+      <div class="stat-value"><span class="accent">142</span>K</div>
+      <div class="stat-label">Total Trades</div>
     </div>
-</section>
-
-<!-- ═══ INSTALL MODAL ═══ -->
-<div class="modal-overlay" id="installModal" style="display:none">
-    <div class="modal">
-        <div class="modal-header">
-            <h3>⚡ Install Skills</h3>
-            <button class="modal-close" id="modalClose">×</button>
-        </div>
-        <div class="modal-body">
-            <div class="install-method">
-                <div class="install-method-badge">npm</div>
-                <pre><code>npx skills add yuroo-ui/dex-ai</code></pre>
-            </div>
-            <div class="install-method">
-                <div class="install-method-badge">Claude Code</div>
-                <pre><code>/plugin marketplace add yuroo-ui/dex-ai
-/plugin install dex-trading</code></pre>
-            </div>
-            <div class="install-method">
-                <div class="install-method-badge">CLI</div>
-                <pre><code>agent-self skill install github:yuroo-ui/dex-ai/packages/plugins/dex-trading/SKILL.md</code></pre>
-            </div>
-            <div class="install-method">
-                <div class="install-method-badge">URL</div>
-                <pre><code>agent-self skill install https://raw.githubusercontent.com/yuroo-ui/dex-ai/main/packages/plugins/dex-bridge/skills/bridge-lifi/SKILL.md</code></pre>
-            </div>
-        </div>
+    <div class="stat-item reveal">
+      <div class="stat-value"><span class="accent">400</span>ms</div>
+      <div class="stat-label">Block Time</div>
     </div>
+  </div>
 </div>
 
-<!-- ═══ TOAST ═══ -->
-<div id="toast" class="toast"></div>
+<!-- MARQUEE -->
+<div class="marquee-wrapper">
+  <div class="marquee-track">
+    <span class="accent">// LIVE</span>
+    <span>ARC/USDC</span>
+    <span class="accent">// ON-CHAIN</span>
+    <span>NO GAS FEES</span>
+    <span class="accent">// ZK PROOF</span>
+    <span>INSTANT SETTLEMENT</span>
+    <span class="accent">// AGENT-NATIVE</span>
+    <span>USDC GAS TOKEN</span>
+    <span class="accent">// LIVE</span>
+    <span>ARC/USDC</span>
+    <span class="accent">// ON-CHAIN</span>
+    <span>NO GAS FEES</span>
+    <span class="accent">// ZK PROOF</span>
+    <span>INSTANT SETTLEMENT</span>
+    <span class="accent">// AGENT-NATIVE</span>
+    <span>USDC GAS TOKEN</span>
+  </div>
+</div>
 
-<!-- ═══ FOOTER ═══ -->
-<footer class="footer">
-    <div class="container">
-        <div class="footer-inner">
-            <div class="footer-brand">
-                <svg width="20" height="20" viewBox="0 0 40 40">
-                    <rect x="4" y="4" width="32" height="32" rx="8" fill="#6366f1" opacity="0.2"/>
-                    <path d="M12 20h16M20 12v16" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round"/>
-                </svg>
-                <span>dex.ai</span>
-                <span class="footer-version">v0.1.0</span>
-            </div>
-            <div class="footer-links">
-                <a href="https://github.com/yuroo-ui/dex-ai" target="_blank">GitHub</a>
-                <a href="https://github.com/yuroo-ui/dex-ai/blob/main/docs/OVERVIEW.md" target="_blank">Docs</a>
-                <a href="/api/plugins" target="_blank">API</a>
-            </div>
-            <div class="footer-copy">Built for AI agents, by agents.</div>
-        </div>
+<!-- SWAP SECTION -->
+<section class="swap-section" id="swap">
+  <div class="swap-text reveal">
+    <div class="section-kicker">Swap</div>
+    <h2>Instant swaps,<br>zero friction</h2>
+    <p>Swap tokens on Arc Network with real on-chain liquidity. Powered by ArcRouter with smart routing across all pools. No wrapped tokens, no synthetic assets.</p>
+    <div class="swap-features">
+      <div class="swap-feature">
+        <span class="dot"></span>
+        <span>USDC as native gas token — no wrapped gas</span>
+      </div>
+      <div class="swap-feature">
+        <span class="dot"></span>
+        <span>ArcRouter smart routing — best price execution</span>
+      </div>
+      <div class="swap-feature">
+        <span class="dot"></span>
+        <span>400ms block time — finality in seconds</span>
+      </div>
+      <div class="swap-feature">
+        <span class="dot"></span>
+        <span>Agent-compatible — autonomous trading via SDK</span>
+      </div>
     </div>
+  </div>
+
+  <div class="swap-card-wrapper reveal">
+    <div class="swap-card">
+      <div class="swap-card-header">
+        <span class="swap-card-title">Swap</span>
+        <span class="swap-card-settings">⚙</span>
+      </div>
+
+      <div class="swap-input-group">
+        <div class="swap-input-label">You pay</div>
+        <div class="swap-input-row">
+          <input class="swap-input" type="text" placeholder="0.0" readonly>
+          <div class="swap-token">
+            <div class="token-icon usdc">$</div>
+            USDC
+          </div>
+        </div>
+        <div class="swap-balance">Balance: 1,250.00 USDC</div>
+      </div>
+
+      <div class="swap-arrow">
+        <button class="swap-arrow-btn">↓</button>
+      </div>
+
+      <div class="swap-input-group">
+        <div class="swap-input-label">You receive</div>
+        <div class="swap-input-row">
+          <input class="swap-input" type="text" placeholder="0.0" readonly>
+          <div class="swap-token">
+            <div class="token-icon">A</div>
+            ARC
+          </div>
+        </div>
+        <div class="swap-balance">Balance: 0.00 ARC</div>
+      </div>
+
+      <div class="swap-rate">1 USDC = 14.32 ARC</div>
+
+      <button class="swap-btn">Connect Wallet</button>
+    </div>
+  </div>
+</section>
+
+<div class="glow-divider"></div>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="features-header reveal">
+    <div class="section-kicker">Features</div>
+    <h2>Built for the agent economy</h2>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card big reveal">
+      <div class="feature-num">01</div>
+      <h3>ArcFactory — Permissionless Pools</h3>
+      <p>Create any token pair instantly. No listing fees, no approval. ArcFactory deploys a new ArcPair contract for every combination. Deep liquidity from day one.</p>
+      <div class="feature-visual">
+        <svg viewBox="0 0 64 64" fill="none" stroke="var(--accent)" stroke-width="1.5">
+          <circle cx="20" cy="32" r="12"/>
+          <circle cx="44" cy="32" r="12"/>
+          <path d="M28 26h8M28 38h8" stroke-dasharray="2 2"/>
+        </svg>
+      </div>
+    </div>
+
+    <div class="feature-card reveal">
+      <div class="feature-num">02</div>
+      <h3>ArcRouter — Smart Routing</h3>
+      <p>Optimal path finding across all pools. Multi-hop swaps when direct pairs don't exist. Minimal slippage, maximum output.</p>
+    </div>
+
+    <div class="feature-card reveal">
+      <div class="feature-num">03</div>
+      <h3>Agent SDK — Autonomous Trading</h3>
+      <p>AI agents trade via ethers.js. Real contract calls, not wrappers. Direct RPC to Arc Network. Full on-chain verification.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CHAIN INFO -->
+<section class="chain-section" id="network">
+  <div class="chain-grid">
+    <div class="chain-text reveal">
+      <div class="section-kicker">Network</div>
+      <h2>Arc Network — Layer 1 for DeFi</h2>
+      <p>High-performance L1 with 400ms block times. USDC as native gas token means no wrapped assets, no bridging complexity. Deployed contracts are EVM-compatible — standard Solidity works out of the box.</p>
+
+      <div class="chain-specs">
+        <div class="spec-item">
+          <div class="spec-label">Chain ID</div>
+          <div class="spec-value mono">5042002</div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Gas Token</div>
+          <div class="spec-value">USDC (18 decimals)</div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Block Time</div>
+          <div class="spec-value">400ms</div>
+        </div>
+        <div class="spec-item">
+          <div class="spec-label">Consensus</div>
+          <div class="spec-value">Tower BFT</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="contracts-visual reveal">
+      <div class="contract-card">
+        <div>
+          <div class="contract-name">ArcFactory</div>
+          <div class="contract-addr">0x...deploy locally</div>
+        </div>
+        <span class="contract-badge">Factory</span>
+      </div>
+      <div class="contract-card">
+        <div>
+          <div class="contract-name">ArcRouter</div>
+          <div class="contract-addr">0x...deploy locally</div>
+        </div>
+        <span class="contract-badge">Router</span>
+      </div>
+      <div class="contract-card">
+        <div>
+          <div class="contract-name">ArcPair</div>
+          <div class="contract-addr">0x...auto-deployed</div>
+        </div>
+        <span class="contract-badge">LP</span>
+      </div>
+      <div class="contract-card">
+        <div>
+          <div class="contract-name">WUSDC</div>
+          <div class="contract-addr">0x...deploy locally</div>
+        </div>
+        <span class="contract-badge">Wrapped</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="glow-divider"></div>
+
+<!-- CTA -->
+<section class="cta-section">
+  <div class="cta-content reveal">
+    <h2>Start trading<br>on <span style="color:var(--accent); text-shadow: 0 0 40px var(--accent-glow);">Arc</span></h2>
+    <p>Connect your wallet. Swap tokens. Provide liquidity. Build agents. The Arc Network is live.</p>
+    <div class="hero-buttons">
+      <a href="#" class="btn-neon">Launch App</a>
+      <a href="#" class="btn-ghost">Read Docs →</a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <svg viewBox="0 0 32 32" fill="none">
+        <path d="M16 2L28 8V24L16 30L4 24V8L16 2Z" stroke="var(--accent)" stroke-width="2"/>
+        <path d="M16 8L22 11V21L16 24L10 21V11L16 8Z" fill="var(--accent)"/>
+      </svg>
+      <span class="footer-brand">ArcDEX</span>
+      <span class="footer-copy">© 2025 Arc Network</span>
+    </div>
+    <div class="footer-links">
+      <a href="#">GitHub</a>
+      <a href="#">Docs</a>
+      <a href="#">Twitter</a>
+      <a href="#">Discord</a>
+    </div>
+  </div>
 </footer>
 
-<script src="/static/js/app.js"></script>
-<script src="/static/js/canvas.js"></script>
+<!-- HERO CANVAS — Particle grid -->
+<script>
+const canvas = document.getElementById('hero-canvas');
+const ctx = canvas.getContext('2d');
+let w, h, particles = [], mouse = { x: -1000, y: -1000 };
+
+function resize() {
+  w = canvas.width = window.innerWidth;
+  h = canvas.height = window.innerHeight;
+}
+
+function initParticles() {
+  particles = [];
+  const spacing = 60;
+  for (let x = spacing; x < w; x += spacing) {
+    for (let y = spacing; y < h; y += spacing) {
+      particles.push({
+        x: x + (Math.random() - 0.5) * 20,
+        y: y + (Math.random() - 0.5) * 20,
+        baseX: x,
+        baseY: y,
+        vx: 0,
+        vy: 0
+      });
+    }
+  }
+}
+
+function draw() {
+  ctx.clearRect(0, 0, w, h);
+
+  // Draw connections
+  for (let i = 0; i < particles.length; i++) {
+    for (let j = i + 1; j < particles.length; j++) {
+      const dx = particles[i].x - particles[j].x;
+      const dy = particles[i].y - particles[j].y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < 100) {
+        const alpha = (1 - dist / 100) * 0.15;
+        ctx.beginPath();
+        ctx.moveTo(particles[i].x, particles[i].y);
+        ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(0, 229, 255, ${alpha})`;
+        ctx.lineWidth = 0.5;
+        ctx.stroke();
+      }
+    }
+  }
+
+  // Draw particles
+  for (const p of particles) {
+    // Mouse repulsion
+    const dx = p.x - mouse.x;
+    const dy = p.y - mouse.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist < 150) {
+      const force = (150 - dist) / 150;
+      p.vx += (dx / dist) * force * 0.5;
+      p.vy += (dy / dist) * force * 0.5;
+    }
+
+    // Return to base
+    p.vx += (p.baseX - p.x) * 0.02;
+    p.vy += (p.baseY - p.y) * 0.02;
+    p.vx *= 0.9;
+    p.vy *= 0.9;
+    p.x += p.vx;
+    p.y += p.vy;
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = dist < 150 ? 'rgba(0, 229, 255, 0.8)' : 'rgba(0, 229, 255, 0.3)';
+    ctx.fill();
+  }
+
+  requestAnimationFrame(draw);
+}
+
+window.addEventListener('resize', () => { resize(); initParticles(); });
+canvas.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+canvas.addEventListener('mouseleave', () => { mouse.x = -1000; mouse.y = -1000; });
+
+resize();
+initParticles();
+draw();
+
+// Scroll reveal
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.2 });
+
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+
 </body>
 </html>

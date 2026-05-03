@@ -5,25 +5,42 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>dex-ai — Agent Skill Marketplace</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/css/styles.css">
 </head>
 <body>
+
+<!-- ═══ CANVAS BACKGROUND ═══ -->
+<canvas id="bgCanvas"></canvas>
 
 <!-- ═══ NAV ═══ -->
 <nav class="nav">
     <div class="nav-inner">
         <a href="/" class="logo">
-            <svg width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="none" stroke="#6366f1" stroke-width="2"/><path d="M8 14h12M14 8v12" stroke="#6366f1" stroke-width="2"/></svg>
-            <span>dex<span class="logo-accent">-ai</span></span>
+            <div class="logo-icon">
+                <svg width="32" height="32" viewBox="0 0 40 40">
+                    <defs>
+                        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#6366f1"/>
+                            <stop offset="100%" style="stop-color:#a78bfa"/>
+                        </linearGradient>
+                    </defs>
+                    <rect x="4" y="4" width="32" height="32" rx="8" fill="url(#logoGrad)" opacity="0.15"/>
+                    <path d="M12 20h16M20 12v16" stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+            </div>
+            <span class="logo-text">dex<span class="logo-accent">.ai</span></span>
         </a>
         <div class="nav-links">
-            <a href="#" class="nav-link active">Explore</a>
-            <a href="https://github.com/yuroo-ui/dex-ai" target="_blank" class="nav-link">GitHub</a>
-            <a href="#docs" class="nav-link">Docs</a>
+            <a href="#plugins" class="nav-link">Plugins</a>
+            <a href="#skills" class="nav-link">Skills</a>
+            <a href="https://github.com/yuroo-ui/dex-ai" target="_blank" class="nav-link">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-2px;margin-right:4px"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+                GitHub
+            </a>
             <button class="btn-connect" id="installBtn">
-                <span class="btn-dot"></span>
-                Install CLI
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Install
             </button>
         </div>
     </div>
@@ -31,32 +48,95 @@
 
 <!-- ═══ HERO ═══ -->
 <section class="hero">
-    <div class="hero-bg"></div>
     <div class="hero-content">
-        <div class="hero-badge">🧩 Agent-to-Agent Skill Marketplace</div>
-        <h1>Swap skills across <span class="gradient-text">every AI agent</span></h1>
-        <p class="hero-sub">Discover, install, and share SKILL.md files. One CLI command. Any agent.</p>
+        <div class="hero-badge">
+            <span class="badge-dot"></span>
+            Open Source · Agent-to-Agent
+        </div>
+        <h1>Swap skills across<br><span class="gradient-text">every AI agent</span></h1>
+        <p class="hero-sub">One CLI command. 30+ chains. Unlimited skills. Install, discover, and share SKILL.md files across any coding agent.</p>
 
-        <!-- Search Bar (Uniswap-style) -->
-        <div class="search-card">
-            <div class="search-input-wrap">
-                <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-                <input type="text" id="searchInput" placeholder="Search skills, plugins, or chains..." autocomplete="off">
-                <button class="search-clear" id="searchClear" style="display:none">×</button>
+        <!-- Swap-style Card -->
+        <div class="swap-card">
+            <div class="swap-card-header">
+                <span class="swap-label">Install Skill</span>
+                <button class="swap-settings" title="Options">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                </button>
             </div>
+
+            <!-- From (Plugin) -->
+            <div class="swap-token">
+                <div class="swap-token-left">
+                    <span class="swap-token-label">From (Plugin)</span>
+                    <select id="fromPlugin" class="swap-select">
+                        <option value="dex-trading">dex-trading</option>
+                        <option value="dex-hooks">dex-hooks</option>
+                        <option value="dex-analytics">dex-analytics</option>
+                        <option value="dex-defi">dex-defi</option>
+                        <option value="dex-bridge">dex-bridge</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Swap Arrow -->
+            <div class="swap-arrow">
+                <div class="swap-arrow-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4"/></svg>
+                </div>
+            </div>
+
+            <!-- To (Skill) -->
+            <div class="swap-token">
+                <div class="swap-token-left">
+                    <span class="swap-token-label">To (Skill)</span>
+                    <select id="toSkill" class="swap-select">
+                        <option value="swap-integration">swap-integration</option>
+                        <option value="mev-protect">mev-protect</option>
+                        <option value="hook-developer">hook-developer</option>
+                        <option value="price-feed">price-feed</option>
+                        <option value="liquidity-manager">liquidity-manager</option>
+                        <option value="bridge-lifi">bridge-lifi</option>
+                        <option value="bridge-relay">bridge-relay</option>
+                        <option value="bridge-any">bridge-any</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Install Button -->
+            <button class="swap-btn" id="swapInstallBtn">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <span>Install Skill</span>
+            </button>
         </div>
 
-        <div class="hero-stats" id="heroStats">
+        <!-- Command Preview -->
+        <div class="command-preview" id="commandPreview">
+            <code id="commandText">npx skills add yuroo-ui/dex-ai</code>
+            <button class="copy-btn" id="copyBtn" title="Copy">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            </button>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ STATS BAR ═══ -->
+<section class="stats-bar">
+    <div class="container">
+        <div class="stats-inner" id="statsBar">
             <!-- populated by JS -->
         </div>
     </div>
 </section>
 
-<!-- ═══ PLUGINS GRID ═══ -->
-<section class="section">
+<!-- ═══ PLUGINS ═══ -->
+<section class="section" id="plugins">
     <div class="container">
         <div class="section-header">
-            <h2>Plugins</h2>
+            <div>
+                <h2>Plugins</h2>
+                <p class="section-desc">Modular skill packages for every DEX use case</p>
+            </div>
             <div class="section-tabs">
                 <button class="tab active" data-filter="all">All</button>
                 <button class="tab" data-filter="trading">Trading</button>
@@ -65,18 +145,22 @@
                 <button class="tab" data-filter="analytics">Analytics</button>
             </div>
         </div>
-        <div class="plugins-grid" id="pluginsGrid">
-            <!-- populated by JS -->
-        </div>
+        <div class="plugins-grid" id="pluginsGrid"></div>
     </div>
 </section>
 
-<!-- ═══ SKILLS TABLE ═══ -->
-<section class="section section-dark">
+<!-- ═══ SKILLS ═══ -->
+<section class="section section-dark" id="skills">
     <div class="container">
         <div class="section-header">
-            <h2>All Skills</h2>
-            <span class="badge" id="skillCount">0 skills</span>
+            <div>
+                <h2>All Skills</h2>
+                <p class="section-desc">Browse and install individual skills</p>
+            </div>
+            <div class="search-mini">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" id="skillSearch" placeholder="Search skills...">
+            </div>
         </div>
         <div class="skills-table-wrap">
             <table class="skills-table">
@@ -88,11 +172,10 @@
                         <th>Install</th>
                     </tr>
                 </thead>
-                <tbody id="skillsTable">
-                    <!-- populated by JS -->
-                </tbody>
+                <tbody id="skillsTable"></tbody>
             </table>
         </div>
+        <div class="skill-count"><span id="skillCount">0</span> skills available</div>
     </div>
 </section>
 
@@ -100,46 +183,57 @@
 <div class="modal-overlay" id="installModal" style="display:none">
     <div class="modal">
         <div class="modal-header">
-            <h3>Install Skills</h3>
+            <h3>⚡ Install Skills</h3>
             <button class="modal-close" id="modalClose">×</button>
         </div>
         <div class="modal-body">
-            <div class="install-section">
-                <h4>npm / npx</h4>
+            <div class="install-method">
+                <div class="install-method-badge">npm</div>
                 <pre><code>npx skills add yuroo-ui/dex-ai</code></pre>
             </div>
-            <div class="install-section">
-                <h4>Claude Code Marketplace</h4>
+            <div class="install-method">
+                <div class="install-method-badge">Claude Code</div>
                 <pre><code>/plugin marketplace add yuroo-ui/dex-ai
 /plugin install dex-trading</code></pre>
             </div>
-            <div class="install-section">
-                <h4>Install a single skill</h4>
-                <pre><code>agent-self skill install github:yuroo-ui/dex-ai/packages/plugins/dex-trading/skills/swap-integration/SKILL.md</code></pre>
+            <div class="install-method">
+                <div class="install-method-badge">CLI</div>
+                <pre><code>agent-self skill install github:yuroo-ui/dex-ai/packages/plugins/dex-trading/SKILL.md</code></pre>
             </div>
-            <div class="install-section">
-                <h4>From URL</h4>
+            <div class="install-method">
+                <div class="install-method-badge">URL</div>
                 <pre><code>agent-self skill install https://raw.githubusercontent.com/yuroo-ui/dex-ai/main/packages/plugins/dex-bridge/skills/bridge-lifi/SKILL.md</code></pre>
             </div>
         </div>
     </div>
 </div>
 
+<!-- ═══ TOAST ═══ -->
+<div id="toast" class="toast"></div>
+
 <!-- ═══ FOOTER ═══ -->
 <footer class="footer">
-    <div class="container footer-inner">
-        <div class="footer-brand">
-            <svg width="24" height="24" viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="none" stroke="#6366f1" stroke-width="2"/><path d="M8 14h12M14 8v12" stroke="#6366f1" stroke-width="2"/></svg>
-            <span>dex-ai</span>
-        </div>
-        <div class="footer-links">
-            <a href="https://github.com/yuroo-ui/dex-ai" target="_blank">GitHub</a>
-            <a href="https://github.com/yuroo-ui/dex-ai/blob/main/docs/OVERVIEW.md" target="_blank">Docs</a>
-            <a href="/api/plugins" target="_blank">API</a>
+    <div class="container">
+        <div class="footer-inner">
+            <div class="footer-brand">
+                <svg width="20" height="20" viewBox="0 0 40 40">
+                    <rect x="4" y="4" width="32" height="32" rx="8" fill="#6366f1" opacity="0.2"/>
+                    <path d="M12 20h16M20 12v16" stroke="#6366f1" stroke-width="2.5" stroke-linecap="round"/>
+                </svg>
+                <span>dex.ai</span>
+                <span class="footer-version">v0.1.0</span>
+            </div>
+            <div class="footer-links">
+                <a href="https://github.com/yuroo-ui/dex-ai" target="_blank">GitHub</a>
+                <a href="https://github.com/yuroo-ui/dex-ai/blob/main/docs/OVERVIEW.md" target="_blank">Docs</a>
+                <a href="/api/plugins" target="_blank">API</a>
+            </div>
+            <div class="footer-copy">Built for AI agents, by agents.</div>
         </div>
     </div>
 </footer>
 
 <script src="/static/js/app.js"></script>
+<script src="/static/js/canvas.js"></script>
 </body>
 </html>

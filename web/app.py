@@ -8,9 +8,6 @@ from fastapi.responses import HTMLResponse, JSONResponse
 
 app = FastAPI(title="dex-ai", version="0.1.0")
 
-# Mount static files
-app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
-
 PLUGINS_DIR = Path(__file__).parent.parent / "packages" / "plugins"
 
 
@@ -22,7 +19,6 @@ def scan_plugins():
     for plugin_dir in sorted(PLUGINS_DIR.iterdir()):
         if not plugin_dir.is_dir():
             continue
-        skill_md = plugin_dir / "SKILL.md"
         skills = []
         skills_dir = plugin_dir / "skills"
         if skills_dir.exists():
@@ -52,7 +48,8 @@ async def index():
 @app.get("/api/plugins")
 async def get_plugins():
     """List all plugins with skills."""
-    return {"plugins": scan_plugins(), "total": len(scan_plugins())}
+    plugins = scan_plugins()
+    return {"plugins": plugins, "total": len(plugins)}
 
 
 @app.get("/api/skills")
@@ -65,7 +62,6 @@ async def get_skills():
             description = ""
             if skill_md_path.exists():
                 content = skill_md_path.read_text()
-                # Extract description from SKILL.md
                 for line in content.split("\n"):
                     if line.startswith("description:"):
                         description = line.split(":", 1)[1].strip().strip('"').strip("'")
@@ -82,6 +78,10 @@ async def get_skills():
 @app.get("/health")
 async def health():
     return {"status": "ok", "service": "dex-ai"}
+
+
+# Mount static files LAST (after all API routes)
+app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
 
 
 if __name__ == "__main__":

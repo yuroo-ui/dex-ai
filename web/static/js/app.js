@@ -1,19 +1,11 @@
 /* ═══ dex-ai App JS ═══ */
 
 const PLUGINS_META = {
-  'dex-trading': { icon: '🔄', desc: 'Swap & routing integration — Router, SDK, MEV protection' },
-  'dex-hooks':   { icon: '🪝', desc: 'Custom DEX hook development for advanced pool logic' },
-  'dex-analytics': { icon: '📊', desc: 'On-chain analytics, price feeds, oracle integration' },
-  'dex-defi':    { icon: '🏦', desc: 'Lending, liquidity, yield optimization, composability' },
-  'dex-bridge':  { icon: '🌉', desc: 'Cross-chain bridge & swap via Li.Fi, Relay, and more' },
-};
-
-const CATEGORY_MAP = {
-  'dex-trading': 'trading',
-  'dex-hooks': 'trading',
-  'dex-defi': 'defi',
-  'dex-analytics': 'analytics',
-  'dex-bridge': 'bridge',
+  'dex-trading':  { icon: '🔄', desc: 'Swap & routing integration — Router, SDK, MEV protection', cat: 'trading' },
+  'dex-hooks':    { icon: '🪝', desc: 'Custom DEX hook development for advanced pool logic', cat: 'trading' },
+  'dex-analytics':{ icon: '📊', desc: 'On-chain analytics, price feeds, oracle integration', cat: 'analytics' },
+  'dex-defi':     { icon: '🏦', desc: 'Lending, liquidity, yield optimization, composability', cat: 'defi' },
+  'dex-bridge':   { icon: '🌉', desc: 'Cross-chain bridge & swap via Li.Fi, Relay, and more', cat: 'bridge' },
 };
 
 let allPlugins = [];
@@ -22,24 +14,24 @@ let activeFilter = 'all';
 
 // ─── Fetch Data ───
 async function loadData() {
-  const [pluginsRes, skillsRes] = await Promise.all([
-    fetch('/api/plugins'), fetch('/api/skills')
-  ]);
-  const pluginsData = await pluginsRes.json();
-  const skillsData = await skillsRes.json();
-  allPlugins = pluginsData.plugins || [];
-  allSkills = skillsData.skills || [];
+  const [pRes, sRes] = await Promise.all([fetch('/api/plugins'), fetch('/api/skills')]);
+  const pData = await pRes.json();
+  const sData = await sRes.json();
+  allPlugins = pData.plugins || [];
+  allSkills = sData.skills || [];
   renderStats();
   renderPlugins();
   renderSkills();
+  updateSwapSelects();
 }
 
 // ─── Stats ───
 function renderStats() {
-  document.getElementById('heroStats').innerHTML = `
-    <div><div class="stat-val">${allPlugins.length}</div>Plugins</div>
-    <div><div class="stat-val">${allSkills.length}</div>Skills</div>
-    <div><div class="stat-val">30+</div>Chains</div>
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat-item"><div class="stat-val">${allPlugins.length}</div><div class="stat-label">Plugins</div></div>
+    <div class="stat-item"><div class="stat-val">${allSkills.length}</div><div class="stat-label">Skills</div></div>
+    <div class="stat-item"><div class="stat-val">30+</div><div class="stat-label">Chains</div></div>
+    <div class="stat-item"><div class="stat-val">4</div><div class="stat-label">Bridges</div></div>
   `;
 }
 
@@ -49,20 +41,19 @@ function renderPlugins(filter = 'all', search = '') {
   let plugins = allPlugins;
 
   if (filter !== 'all') {
-    plugins = plugins.filter(p => CATEGORY_MAP[p.name] === filter);
+    plugins = plugins.filter(p => PLUGINS_META[p.name]?.cat === filter);
   }
   if (search) {
     const q = search.toLowerCase();
     plugins = plugins.filter(p =>
-      p.name.includes(q) ||
-      p.skills.some(s => s.toLowerCase().includes(q))
+      p.name.includes(q) || p.skills.some(s => s.toLowerCase().includes(q))
     );
   }
 
   grid.innerHTML = plugins.map(p => {
     const meta = PLUGINS_META[p.name] || { icon: '📦', desc: '' };
     return `
-      <div class="plugin-card" data-plugin="${p.name}">
+      <div class="plugin-card">
         <div class="plugin-card-top">
           <div class="plugin-name">
             <span class="plugin-icon">${meta.icon}</span>
@@ -72,14 +63,28 @@ function renderPlugins(filter = 'all', search = '') {
         </div>
         <div class="plugin-desc">${meta.desc}</div>
         <div class="plugin-skills">
-          ${p.skills.map(s => `<span class="skill-tag">${s}</span>`).join('')}
+          ${p.skills.map(s => `<span class="skill-tag" data-skill="${s}">${s}</span>`).join('')}
         </div>
         <div class="plugin-footer">
-          <span class="plugin-install">/plugin install ${p.name}</span>
+          <span class="plugin-install" data-cmd="/plugin install ${p.name}">/plugin install ${p.name}</span>
         </div>
       </div>
     `;
   }).join('');
+
+  // Click handlers for skill tags
+  grid.querySelectorAll('.skill-tag').forEach(tag => {
+    tag.addEventListener('click', () => {
+      document.getElementById('toSkill').value = tag.dataset.skill;
+      updateCommand();
+      document.getElementById('swapInstallBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+
+  // Click handlers for install commands
+  grid.querySelectorAll('.plugin-install').forEach(el => {
+    el.addEventListener('click', () => copyToClipboard(el.dataset.cmd, 'Copied!'));
+  });
 }
 
 // ─── Skills Table ───
@@ -96,37 +101,76 @@ function renderSkills(search = '') {
     );
   }
 
-  document.getElementById('skillCount').textContent = `${skills.length} skills`;
+  document.getElementById('skillCount').textContent = skills.length;
 
   tbody.innerHTML = skills.map(s => `
     <tr>
       <td><span class="skill-name">${s.name}</span></td>
       <td><span class="plugin-tag">${s.plugin}</span></td>
       <td><span class="desc">${s.description || '—'}</span></td>
-      <td><span class="install-cmd" onclick="copyInstall('${s.path}')" title="Click to copy">/install ${s.name}</span></td>
+      <td><span class="install-cmd" data-path="${s.path}">/install ${s.name}</span></td>
     </tr>
   `).join('');
-}
 
-// ─── Copy Install ───
-function copyInstall(path) {
-  const cmd = `agent-self skill install github:yuroo-ui/dex-ai/${path}`;
-  navigator.clipboard.writeText(cmd).then(() => {
-    showToast('Copied to clipboard!');
+  tbody.querySelectorAll('.install-cmd').forEach(el => {
+    el.addEventListener('click', () => {
+      const cmd = `agent-self skill install github:yuroo-ui/dex-ai/${el.dataset.path}`;
+      copyToClipboard(cmd, 'Copied!');
+    });
   });
 }
 
+// ─── Swap Card Logic ───
+const PLUGIN_SKILLS = {};
+function updateSwapSelects() {
+  const fromEl = document.getElementById('fromPlugin');
+  const toEl = document.getElementById('toSkill');
+
+  allPlugins.forEach(p => {
+    PLUGIN_SKILLS[p.name] = p.skills;
+  });
+
+  fromEl.addEventListener('change', () => {
+    const plugin = fromEl.value;
+    const skills = PLUGIN_SKILLS[plugin] || [];
+    toEl.innerHTML = skills.map(s => `<option value="${s}">${s}</option>`).join('');
+    updateCommand();
+  });
+
+  toEl.addEventListener('change', updateCommand);
+  updateCommand();
+}
+
+function updateCommand() {
+  const plugin = document.getElementById('fromPlugin')?.value || 'dex-trading';
+  const skill = document.getElementById('toSkill')?.value || '';
+  const cmd = skill
+    ? `agent-self skill install github:yuroo-ui/dex-ai/packages/plugins/${plugin}/skills/${skill}/SKILL.md`
+    : `npx skills add yuroo-ui/dex-ai`;
+  document.getElementById('commandText').textContent = cmd;
+}
+
+// Swap Install Button
+document.getElementById('swapInstallBtn')?.addEventListener('click', () => {
+  const cmd = document.getElementById('commandText').textContent;
+  copyToClipboard(cmd, 'Command copied!');
+});
+
+// ─── Copy ───
+function copyToClipboard(text, msg = 'Copied!') {
+  navigator.clipboard.writeText(text).then(() => showToast(msg));
+}
+
+document.getElementById('copyBtn')?.addEventListener('click', () => {
+  copyToClipboard(document.getElementById('commandText').textContent);
+});
+
+// ─── Toast ───
 function showToast(msg) {
-  let toast = document.createElement('div');
+  const toast = document.getElementById('toast');
   toast.textContent = msg;
-  Object.assign(toast.style, {
-    position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)',
-    background: '#6366f1', color: 'white', padding: '10px 24px',
-    borderRadius: '999px', fontSize: '14px', fontWeight: '600', zIndex: '999',
-    animation: 'fadeIn 0.2s',
-  });
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 2000);
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2000);
 }
 
 // ─── Tabs ───
@@ -135,36 +179,24 @@ document.querySelectorAll('.tab').forEach(tab => {
     document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
     tab.classList.add('active');
     activeFilter = tab.dataset.filter;
-    renderPlugins(activeFilter, document.getElementById('searchInput').value);
+    renderPlugins(activeFilter, document.getElementById('skillSearch')?.value || '');
   });
 });
 
 // ─── Search ───
-const searchInput = document.getElementById('searchInput');
-const searchClear = document.getElementById('searchClear');
-
-searchInput.addEventListener('input', (e) => {
-  const q = e.target.value;
-  searchClear.style.display = q ? 'block' : 'none';
-  renderPlugins(activeFilter, q);
-  renderSkills(q);
-});
-
-searchClear.addEventListener('click', () => {
-  searchInput.value = '';
-  searchClear.style.display = 'none';
-  renderPlugins(activeFilter);
-  renderSkills();
+document.getElementById('skillSearch')?.addEventListener('input', (e) => {
+  renderSkills(e.target.value);
 });
 
 // ─── Install Modal ───
-const installBtn = document.getElementById('installBtn');
 const installModal = document.getElementById('installModal');
-const modalClose = document.getElementById('modalClose');
-
-installBtn.addEventListener('click', () => { installModal.style.display = 'flex'; });
-modalClose.addEventListener('click', () => { installModal.style.display = 'none'; });
-installModal.addEventListener('click', (e) => {
+document.getElementById('installBtn')?.addEventListener('click', () => {
+  installModal.style.display = 'flex';
+});
+document.getElementById('modalClose')?.addEventListener('click', () => {
+  installModal.style.display = 'none';
+});
+installModal?.addEventListener('click', (e) => {
   if (e.target === installModal) installModal.style.display = 'none';
 });
 

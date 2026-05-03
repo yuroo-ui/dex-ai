@@ -9,3 +9,4 @@ coverage/
 .nyc_output/
 .typedoc/
 nx.json.bak
+__pycache__/

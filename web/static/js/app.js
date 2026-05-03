@@ -132,12 +132,18 @@ function loadDefaultTokens() {
   Swap.toToken = tokens[1];  // USDC
   updateTokenUI('from');
   updateTokenUI('to');
+  // Set default network icon (Ethereum)
+  const ethNetSvg = getNetworkIcon('Ethereum');
+  $('#networkIcon').src = URL.createObjectURL(new Blob([ethNetSvg], { type: 'image/svg+xml' }));
   // Bridge defaults
   const arbTokens = getTokensForChain(42161);
   Bridge.fromToken = tokens[1]; // USDC on ETH
   Bridge.toToken = arbTokens[1]; // USDC on ARB
   updateBridgeTokenUI('from');
   updateBridgeTokenUI('to');
+  // Set default bridge network icons
+  $('#bridgeFromIcon').src = URL.createObjectURL(new Blob([getNetworkIcon('Ethereum')], { type: 'image/svg+xml' }));
+  $('#bridgeToIcon').src = URL.createObjectURL(new Blob([getNetworkIcon('Arbitrum')], { type: 'image/svg+xml' }));
   // Set balance display
   updateBalances();
 }
@@ -147,7 +153,15 @@ function updateTokenUI(side) {
   if (!token) return;
   $(side === 'from' ? '#fromTokenSymbol' : '#toTokenSymbol').textContent = token.symbol;
   const icon = $(side === 'from' ? '#fromTokenIcon' : '#toTokenIcon');
-  if (token.icon) { icon.src = token.icon; icon.style.display = 'block'; }
+  // Use inline SVG instead of external URL (works on mobile)
+  const svg = getTokenIcon(token.symbol);
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  icon.src = URL.createObjectURL(blob);
+  icon.style.display = 'block';
+  // Also set fallback for broken external images
+  icon.onerror = () => {
+    icon.src = URL.createObjectURL(new Blob([getTokenIcon(token.symbol)], { type: 'image/svg+xml' }));
+  };
 }
 
 function updateSwapBtn() {
@@ -235,7 +249,10 @@ function updateBridgeTokenUI(side) {
   const prefix = side === 'from' ? 'bridgeFrom' : 'bridgeTo';
   $(`#${prefix}TokenSymbol`).textContent = token.symbol;
   const icon = $(`#${prefix}TokenIcon`);
-  if (token.icon) { icon.src = token.icon; icon.style.display = 'block'; }
+  // Use inline SVG instead of external URL (works on mobile)
+  const svg = getTokenIcon(token.symbol);
+  icon.src = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+  icon.style.display = 'block';
 }
 
 function updateBridgeBtn() {
@@ -277,7 +294,7 @@ function renderTokenList(tokens) {
   const list = $('#tokenList');
   list.innerHTML = tokens.map((t) => `
     <div class="token-item" data-address="${t.address}">
-      <img src="${t.icon}" alt="${t.symbol}" onerror="this.style.display='none'">
+      <span class="token-icon-inline">${getTokenIcon(t.symbol)}</span>
       <div class="token-item-info">
         <div class="token-item-name">${t.symbol}</div>
         <div class="token-item-chain">${t.name}</div>
@@ -328,7 +345,7 @@ function renderNetworkGrid(nets) {
   const grid = $('#networkGrid');
   grid.innerHTML = nets.map((n) => `
     <div class="network-item" data-id="${n.id}">
-      <img src="${n.icon}" alt="${n.name}" onerror="this.style.display='none'">
+      <span class="network-icon-inline">${getNetworkIcon(n.name)}</span>
       <span>${n.name}</span>
     </div>
   `).join('');
@@ -343,7 +360,9 @@ function renderNetworkGrid(nets) {
         Swap.fromChain = id;
         Swap.toChain = id;
         $('#networkName').textContent = net.name;
-        $('#networkIcon').src = net.icon;
+        // Use inline SVG icon
+        const netSvg = getNetworkIcon(net.name);
+        $('#networkIcon').src = URL.createObjectURL(new Blob([netSvg], { type: 'image/svg+xml' }));
         // Reset tokens for new chain
         const tokens = getTokensForChain(id);
         Swap.fromToken = tokens[0];
@@ -353,14 +372,14 @@ function renderNetworkGrid(nets) {
       } else if (modalNetworkTarget === 'bridgeFrom') {
         Bridge.fromChain = id;
         $('#bridgeFromName').textContent = net.name;
-        $('#bridgeFromIcon').src = net.icon;
+        $('#bridgeFromIcon').src = URL.createObjectURL(new Blob([getNetworkIcon(net.name)], { type: 'image/svg+xml' }));
         const tokens = getTokensForChain(id);
         Bridge.fromToken = tokens[0];
         updateBridgeTokenUI('from');
       } else if (modalNetworkTarget === 'bridgeTo') {
         Bridge.toChain = id;
         $('#bridgeToName').textContent = net.name;
-        $('#bridgeToIcon').src = net.icon;
+        $('#bridgeToIcon').src = URL.createObjectURL(new Blob([getNetworkIcon(net.name)], { type: 'image/svg+xml' }));
         const tokens = getTokensForChain(id);
         Bridge.toToken = tokens[0];
         updateBridgeTokenUI('to');

@@ -1,7 +1,8 @@
-// ═══ Arc DEX App ═══
+// ═══ Arc DEX App — with Smart Contract Integration ═══
 
 // ─── State ───
 let currentPage = 'swap';
+let routerContract = null;
 
 // ─── Helpers ───
 const $ = (s) => document.querySelector(s);
@@ -61,10 +62,9 @@ const Wallet = {
       try {
         await window.ethereum.request({
           method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x4CF7E2' }], // 5042002 in hex
+          params: [{ chainId: '0x4CF7E2' }], // 5042002 hex
         });
       } catch (e) {
-        // Add Arc network if not exists
         if (e.code === 4902) {
           await window.ethereum.request({
             method: 'wallet_addEthereumChain',
@@ -84,7 +84,9 @@ const Wallet = {
       this.signer = await this.provider.getSigner();
       this.address = accounts[0];
       
-      // Get balance
+      // Init contracts
+      routerContract = new ethers.Contract(CONTRACTS.router, ROUTER_ABI, this.signer);
+      
       const balance = await this.provider.getBalance(this.address);
       this.balance = formatUnits(balance, 18);
       
@@ -100,6 +102,7 @@ const Wallet = {
     this.signer = null;
     this.address = null;
     this.balance = null;
+    routerContract = null;
     updateWalletUI();
   },
 };
@@ -138,8 +141,10 @@ function updateWalletUI() {
     $('#walletDrawer').querySelector('.drawer-empty').style.display = 'none';
   } else {
     btn.textContent = 'Connect Wallet';
-    $('#walletDrawer').querySelector('.drawer-content').style.display = 'none';
-    $('#walletDrawer').querySelector('.drawer-empty').style.display = 'block';
+    if ($('#walletDrawer').querySelector('.drawer-content')) {
+      $('#walletDrawer').querySelector('.drawer-content').style.display = 'none';
+      $('#walletDrawer').querySelector('.drawer-empty').style.display = 'block';
+    }
   }
 }
 
@@ -172,16 +177,30 @@ function initSwap() {
       return;
     }
     
-    const quote = await Swap.getQuote(val);
-    if (quote) {
-      $('#toAmount').value = quote.toAmount;
-      $('#swapBtn').textContent = `Swap USDC → USDC`;
-      $('#swapBtn').disabled = !Wallet.address;
+    // If router contract is available, get real quote
+    if (routerContract && Swap.fromToken && Swap.toToken) {
+      try {
+        const amountIn = ethers.parseUnits(val, Swap.fromToken.decimals);
+        const path = [Swap.fromToken.address, Swap.toToken.address];
+        const amounts = await routerContract.getAmountsOut(amountIn, path);
+        const outAmount = formatUnits(amounts[1], Swap.toToken.decimals);
+        $('#toAmount').value = outAmount;
+        $('#swapBtn').textContent = `Swap ${Swap.fromToken.symbol} → ${Swap.toToken.symbol}`;
+        $('#swapBtn').disabled = !Wallet.address;
+        return;
+      } catch (err) {
+        console.log('Quote error (no pair?):', err.message);
+        // Fallback to 1:1 for same-token
+      }
     }
+    
+    // Fallback: 1:1 for same token
+    $('#toAmount').value = val;
+    $('#swapBtn').textContent = `Swap ${Swap.fromToken.symbol} → ${Swap.toToken.symbol}`;
+    $('#swapBtn').disabled = !Wallet.address;
   }, 300));
 
   $('#swapDirection').addEventListener('click', () => {
-    // For single-token chain, just flip amount display
     const fromVal = $('#fromAmount').value;
     const toVal = $('#toAmount').value;
     $('#fromAmount').value = toVal;
@@ -193,19 +212,67 @@ function initSwap() {
       Wallet.connect();
       return;
     }
+    if (!routerContract) {
+      showToast('Contract not loaded. Reconnect wallet.', 'error');
+      return;
+    }
+    
     const amount = $('#fromAmount').value;
     if (!amount) return;
     
     try {
-      $('#swapBtn').textContent = 'Swapping...';
+      $('#swapBtn').textContent = 'Approving...';
       $('#swapBtn').disabled = true;
-      const txHash = await Swap.execute(amount);
-      $('#swapBtn').textContent = 'Success!';
-      showToast(`Transaction: ${txHash.slice(0, 10)}...`, 'success');
+      
+      const amountIn = ethers.parseUnits(amount, Swap.fromToken.decimals);
+      const path = [Swap.fromToken.address, Swap.toToken.address];
+      const deadline = Math.floor(Date.now() / 1000) + 300; // 5 min
+      
+      // For native USDC swap
+      if (Swap.fromToken.address === '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE') {
+        $('#swapBtn').textContent = 'Swapping...';
+        const tx = await routerContract.swapExactETHForTokens(
+          0, // amountOutMin (no slippage protection for demo)
+          path,
+          Wallet.address,
+          deadline,
+          { value: amountIn }
+        );
+        $('#swapBtn').textContent = 'Confirming...';
+        await tx.wait();
+        showToast(`Swapped! Tx: ${tx.hash.slice(0, 10)}...`, 'success');
+      } else {
+        // ERC20 token swap
+        const tokenContract = new ethers.Contract(Swap.fromToken.address, ERC20_ABI, Wallet.signer);
+        const allowance = await tokenContract.allowance(Wallet.address, CONTRACTS.router);
+        
+        if (allowance < amountIn) {
+          $('#swapBtn').textContent = 'Approving...';
+          const approveTx = await tokenContract.approve(CONTRACTS.router, ethers.MaxUint256);
+          await approveTx.wait();
+        }
+        
+        $('#swapBtn').textContent = 'Swapping...';
+        const tx = await routerContract.swapExactTokensForTokens(
+          amountIn,
+          0, // amountOutMin
+          path,
+          Wallet.address,
+          deadline
+        );
+        $('#swapBtn').textContent = 'Confirming...';
+        await tx.wait();
+        showToast(`Swapped! Tx: ${tx.hash.slice(0, 10)}...`, 'success');
+      }
+      
       getBalances();
+      $('#swapBtn').textContent = `Swap ${Swap.fromToken.symbol} → ${Swap.toToken.symbol}`;
+      $('#swapBtn').disabled = false;
     } catch (err) {
+      console.error('Swap error:', err);
       $('#swapBtn').textContent = 'Swap Failed';
-      showToast(err.message, 'error');
+      showToast(err.reason || err.message, 'error');
+      $('#swapBtn').disabled = false;
     }
   });
 }
@@ -231,22 +298,25 @@ function initBridge() {
       return;
     }
     
-    const quote = await Bridge.getQuote(val);
-    if (quote) {
-      $('#bridgeToAmount').value = quote.toAmount;
-      $('#bridgeQuoteInfo').style.display = 'block';
-      $('#bridgeQuoteInfo').innerHTML = `Fee: ${quote.fee} USDC · ~${quote.estimatedTime}`;
-    }
+    const fee = parseFloat(val) * 0.001;
+    const toAmount = (parseFloat(val) - fee).toFixed(6);
+    $('#bridgeToAmount').value = toAmount;
+    $('#bridgeQuoteInfo').style.display = 'block';
+    $('#bridgeQuoteInfo').innerHTML = `Fee: ${fee.toFixed(6)} USDC · ~2-5 min · Arc Native Bridge`;
   }, 300));
 
   $('#bridgeSwapDirection').addEventListener('click', () => {
-    // Swap bridge direction — toggle between Arc and external chain
+    // Toggle bridge direction
   });
 
-  $('#bridgeBtn').addEventListener('click', async () => {
+  $('#bridgeBtn').addEventListener('click', () => {
     const amount = $('#bridgeFromAmount').value;
-    if (!amount) return;
-    Bridge.execute(amount);
+    if (!amount) {
+      showToast('Enter amount first', 'error');
+      return;
+    }
+    // Redirect to Arc Bridge
+    window.open(`https://bridge.arc.network`, '_blank');
   });
 }
 
@@ -266,7 +336,7 @@ function showToast(msg, type = 'info') {
   const toast = $('#toast');
   toast.textContent = msg;
   toast.className = `toast show ${type}`;
-  setTimeout(() => toast.classList.remove('show'), 3000);
+  setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
 // ─── Util ───

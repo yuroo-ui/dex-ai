@@ -151,16 +151,17 @@ function loadDefaultTokens() {
 function updateTokenUI(side) {
   const token = side === 'from' ? Swap.fromToken : Swap.toToken;
   if (!token) return;
+  const chainId = side === 'from' ? Swap.fromChain : Swap.toChain;
   $(side === 'from' ? '#fromTokenSymbol' : '#toTokenSymbol').textContent = token.symbol;
   const icon = $(side === 'from' ? '#fromTokenIcon' : '#toTokenIcon');
   // Use inline SVG instead of external URL (works on mobile)
-  const svg = getTokenIcon(token.symbol);
+  const svg = getTokenIcon(token.symbol, chainId);
   const blob = new Blob([svg], { type: 'image/svg+xml' });
   icon.src = URL.createObjectURL(blob);
   icon.style.display = 'block';
   // Also set fallback for broken external images
   icon.onerror = () => {
-    icon.src = URL.createObjectURL(new Blob([getTokenIcon(token.symbol)], { type: 'image/svg+xml' }));
+    icon.src = URL.createObjectURL(new Blob([getTokenIcon(token.symbol, chainId)], { type: 'image/svg+xml' }));
   };
 }
 
@@ -247,11 +248,12 @@ function updateBridgeTokenUI(side) {
   const token = side === 'from' ? Bridge.fromToken : Bridge.toToken;
   if (!token) return;
   const prefix = side === 'from' ? 'bridgeFrom' : 'bridgeTo';
+  const chainId = side === 'from' ? Bridge.fromChain : Bridge.toChain;
   $(`#${prefix}TokenSymbol`).textContent = token.symbol;
   const icon = $(`#${prefix}TokenIcon`);
-  // Use inline SVG instead of external URL (works on mobile)
-  const svg = getTokenIcon(token.symbol);
-  icon.src = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+  const svg = getTokenIcon(token.symbol, chainId);
+  const blob = new Blob([svg], { type: 'image/svg+xml' });
+  icon.src = URL.createObjectURL(blob);
   icon.style.display = 'block';
 }
 
@@ -292,9 +294,10 @@ function closeTokenModal() { $('#tokenModal').style.display = 'none'; }
 
 function renderTokenList(tokens) {
   const list = $('#tokenList');
+  const chainId = currentModal === 'toToken' ? Swap.toChain : Swap.fromChain;
   list.innerHTML = tokens.map((t) => `
     <div class="token-item" data-address="${t.address}">
-      <span class="token-icon-inline">${getTokenIcon(t.symbol)}</span>
+      <span class="token-icon-inline">${getTokenIcon(t.symbol, chainId)}</span>
       <div class="token-item-info">
         <div class="token-item-name">${t.symbol}</div>
         <div class="token-item-chain">${t.name}</div>

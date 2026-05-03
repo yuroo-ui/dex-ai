@@ -80,6 +80,14 @@ const NETWORKS = {
     native: { symbol: 'ETH', decimals: 18 },
     lifiId: 534352,
   },
+  5042002: {
+    id: 5042002, name: 'Arc Testnet', short: 'USDC',
+    icon: 'arc',
+    rpc: 'https://rpc.testnet.arc.network',
+    explorer: 'https://testnet.arcscan.app',
+    native: { symbol: 'USDC', decimals: 18 },
+    lifiId: 5042002,
+  },
 };
 
 // Popular tokens per chain
@@ -117,6 +125,10 @@ const CHAIN_TOKENS = {
     { symbol: 'BNB', name: 'BNB', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18, icon: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/bsc.svg' },
     { symbol: 'USDC', name: 'USD Coin', address: '0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d', decimals: 18, icon: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/usdc.svg' },
     { symbol: 'USDT', name: 'Tether', address: '0x55d398326f99059fF775485246999027B3197955', decimals: 18, icon: 'https://raw.githubusercontent.com/lifinance/types/main/src/assets/icons/usdt.svg' },
+  ],
+  // Arc Network — USDC is the native gas token (18 decimals)
+  5042002: [
+    { symbol: 'USDC', name: 'USD Coin (Native)', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18, icon: 'arc' },
   ],
 };
 

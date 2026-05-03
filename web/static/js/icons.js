@@ -12,9 +12,12 @@ const TOKEN_ICONS = {
   POL: `<svg viewBox="0 0 32 32" width="100%" height="100%"><circle cx="16" cy="16" r="16" fill="#8247E5"/><text x="16" y="20" text-anchor="middle" fill="#fff" font-size="9" font-weight="700" font-family="Inter,sans-serif">POL</text></svg>`,
   AVAX: `<svg viewBox="0 0 32 32" width="100%" height="100%"><circle cx="16" cy="16" r="16" fill="#E84142"/><text x="16" y="20" text-anchor="middle" fill="#fff" font-size="9" font-weight="700" font-family="Inter,sans-serif">AVAX</text></svg>`,
   cbBTC: `<svg viewBox="0 0 32 32" width="100%" height="100%"><circle cx="16" cy="16" r="16" fill="#0052FF"/><text x="16" y="20" text-anchor="middle" fill="#fff" font-size="9" font-weight="700" font-family="Inter,sans-serif">cbBTC</text></svg>`,
+  ARC_USDC: `<svg viewBox="0 0 32 32" width="100%" height="100%"><defs><linearGradient id="arcTG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a855f7"/></linearGradient></defs><circle cx="16" cy="16" r="16" fill="url(#arcTG)"/><text x="16" y="21" text-anchor="middle" fill="#fff" font-size="11" font-weight="700" font-family="Inter,sans-serif">$</text></svg>`,
 };
 
-function getTokenIcon(symbol) {
+function getTokenIcon(symbol, chainId) {
+  // Arc Network USDC gets special gradient icon
+  if (symbol === 'USDC' && chainId === 5042002) return TOKEN_ICONS.ARC_USDC;
   return TOKEN_ICONS[symbol] || `<svg viewBox="0 0 32 32" width="100%" height="100%"><circle cx="16" cy="16" r="16" fill="#333"/><text x="16" y="20" text-anchor="middle" fill="#888" font-size="10" font-weight="700">${(symbol||'?').slice(0,3)}</text></svg>`;
 }
 
@@ -30,6 +33,7 @@ const NETWORK_ICONS = {
   'zkSync Era': `<svg viewBox="0 0 32 32" width="100%" height="100%"><circle cx="16" cy="16" r="16" fill="#8C8DFC"/><text x="16" y="20" text-anchor="middle" fill="#fff" font-size="8" font-weight="700">ZK</text></svg>`,
   'Linea': `<svg viewBox="0 0 32 32" width="100%" height="100%"><circle cx="16" cy="16" r="16" fill="#121212"/><path d="M8 16h16M16 8v16" stroke="#fff" stroke-width="2"/></svg>`,
   'Scroll': `<svg viewBox="0 0 32 32" width="100%" height="100%"><circle cx="16" cy="16" r="16" fill="#FFEDE0"/><text x="16" y="20" text-anchor="middle" fill="#F60" font-size="8" font-weight="700">SCR</text></svg>`,
+  'Arc Testnet': `<svg viewBox="0 0 32 32" width="100%" height="100%"><defs><linearGradient id="arcG" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#a855f7"/></linearGradient></defs><circle cx="16" cy="16" r="16" fill="url(#arcG)"/><path d="M10 22V10h4l4 6 4-6h4v12h-3v-8l-3.5 5h-3L13 14v8z" fill="#fff"/></svg>`,
 };
 
 function getNetworkIcon(name) {

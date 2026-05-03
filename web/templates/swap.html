@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArcDEX — Swap</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.9.0/ethers.umd.min.js"></script>
+<style>
+:root{--bg:#000;--bg-elev:#0A0A0A;--bg-card:#0F0F0F;--hairline:#1F1F1F;--text:#FFF;--text-muted:#A3A3A3;--text-faint:#525252;--accent:#00E5FF;--accent-glow:rgba(0,229,255,.4);--red:#FF4444;--green:#00E676}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+
+/* NAV */
+nav{padding:16px 32px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--hairline);background:rgba(0,0,0,.7);backdrop-filter:blur(24px);position:sticky;top:0;z-index:100}
+.nav-logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--text);text-decoration:none}
+.nav-logo svg{width:28px;height:28px}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:14px;font-weight:500;transition:color 200ms}
+.nav-links a:hover,.nav-links a.active{color:var(--accent)}
+#connectBtn{background:var(--accent);color:var(--bg);padding:10px 20px;border-radius:999px;font-weight:600;border:none;cursor:pointer;font-size:14px;font-family:inherit;transition:box-shadow 300ms}
+#connectBtn:hover{box-shadow:0 0 24px var(--accent-glow)}
+#connectBtn.connected{background:var(--bg-card);color:var(--accent);border:1px solid var(--accent)}
+
+/* MAIN */
+.swap-page{max-width:440px;margin:60px auto;padding:0 16px}
+
+/* NETWORK BADGE */
+.network-badge{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;background:var(--bg-elev);border:1px solid var(--hairline);border-radius:10px;margin-bottom:24px;font-family:'Geist Mono',monospace;font-size:12px;color:var(--text-muted)}
+.network-badge .dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(0,230,118,.4)}
+.network-badge .chain-name{color:var(--accent);font-weight:600}
+
+/* SWAP CARD */
+.swap-card{background:var(--bg-card);border:1px solid var(--hairline);border-radius:16px;padding:24px;position:relative}
+.swap-card::before{content:'';position:absolute;top:0;left:12%;right:12%;height:1px;background:linear-gradient(90deg,transparent,rgba(0,229,255,.3),transparent)}
+.swap-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.swap-title{font-weight:600;font-size:18px}
+.slippage-badge{font-family:'Geist Mono',monospace;font-size:11px;color:var(--text-faint);background:var(--bg-elev);padding:5px 10px;border-radius:6px;border:1px solid var(--hairline)}
+
+/* INPUT */
+.input-group{background:var(--bg-elev);border:1px solid var(--hairline);border-radius:12px;padding:16px;margin-bottom:4px;transition:border-color 200ms}
+.input-group:focus-within{border-color:var(--accent)}
+.input-label{font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin-bottom:8px}
+.input-row{display:flex;justify-content:space-between;align-items:center}
+.token-input{background:none;border:none;color:var(--text);font-family:'Geist',sans-serif;font-size:28px;font-weight:600;width:55%;outline:none;letter-spacing:-.02em}
+.token-input::placeholder{color:var(--text-faint)}
+.token-selector{display:flex;align-items:center;gap:8px;background:var(--bg-card);border:1px solid var(--hairline);border-radius:999px;padding:8px 14px;font-weight:600;font-size:14px;cursor:pointer;transition:border-color 200ms}
+.token-selector:hover{border-color:var(--accent)}
+.token-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--bg);flex-shrink:0}
+.token-usdc{background:#2775CA}
+.token-arc{background:var(--accent)}
+.input-meta{display:flex;justify-content:space-between;margin-top:8px;font-family:'Geist Mono',monospace;font-size:11px;color:var(--text-faint)}
+.max-btn{color:var(--accent);cursor:pointer;border:none;background:none;font-family:inherit;font-size:inherit}
+.max-btn:hover{text-decoration:underline}
+
+/* ARROW */
+.arrow-divider{display:flex;justify-content:center;margin:-4px 0;position:relative;z-index:1}
+.arrow-btn{width:44px;height:44px;background:var(--bg-card);border:1px solid var(--hairline);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);cursor:pointer;font-size:18px;transition:border-color 200ms,color 200ms}
+.arrow-btn:hover{border-color:var(--accent);color:var(--accent)}
+
+/* QUOTE */
+.quote-box{background:var(--bg-elev);border:1px solid var(--hairline);border-radius:10px;padding:14px;margin:16px 0;font-family:'Geist Mono',monospace;font-size:12px;display:none}
+.quote-box.visible{display:block}
+.quote-row{display:flex;justify-content:space-between;margin-bottom:6px;color:var(--text-faint)}
+.quote-row:last-child{margin-bottom:0}
+.quote-row .val{color:var(--text-muted)}
+.quote-row .accent{color:var(--accent)}
+.quote-row .green{color:var(--green)}
+.quote-row .warn{color:#FF9800}
+
+/* EXECUTE */
+.swap-btn{width:100%;padding:16px;background:var(--accent);color:var(--bg);border:none;border-radius:12px;font-weight:700;font-size:16px;cursor:pointer;font-family:inherit;transition:box-shadow 300ms,opacity 200ms}
+.swap-btn:hover:not(:disabled){box-shadow:0 0 40px var(--accent-glow)}
+.swap-btn:disabled{opacity:.4;cursor:not-allowed}
+.swap-btn.loading{opacity:.7;pointer-events:none}
+
+/* STATUS */
+.status-bar{margin-top:16px;padding:12px;border-radius:10px;font-family:'Geist Mono',monospace;font-size:12px;display:none;text-align:center}
+.status-bar.visible{display:block}
+.status-bar.pending{background:rgba(0,229,255,.08);border:1px solid rgba(0,229,255,.2);color:var(--accent)}
+.status-bar.success{background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.2);color:var(--green)}
+.status-bar.error{background:rgba(255,68,68,.08);border:1px solid rgba(255,68,68,.2);color:var(--red)}
+
+/* TX LINK */
+.tx-link{color:var(--accent);text-decoration:none}
+.tx-link:hover{text-decoration:underline}
+
+/* HISTORY */
+.history-section{margin-top:32px}
+.history-title{font-family:'Geist Mono',monospace;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.history-title::before{content:'//';color:var(--text-faint)}
+.history-empty{text-align:center;padding:32px;color:var(--text-faint);font-size:14px}
+.tx-item{background:var(--bg-card);border:1px solid var(--hairline);border-radius:10px;padding:14px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center}
+.tx-info{display:flex;flex-direction:column;gap:4px}
+.tx-type{font-weight:600;font-size:14px}
+.tx-detail{font-family:'Geist Mono',monospace;font-size:11px;color:var(--text-faint)}
+.tx-status{font-family:'Geist Mono',monospace;font-size:11px;padding:4px 10px;border-radius:999px}
+.tx-status.pending{background:rgba(0,229,255,.1);color:var(--accent)}
+.tx-status.confirmed{background:rgba(0,230,118,.1);color:var(--green)}
+.tx-status a{color:inherit;text-decoration:none}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">
+    <svg viewBox="0 0 32 32" fill="none"><path d="M16 2L28 8V24L16 30L4 24V8L16 2Z" stroke="var(--accent)" stroke-width="2"/><path d="M16 8L22 11V21L16 24L10 21V11L16 8Z" fill="var(--accent)"/></svg>
+    ArcDEX
+  </a>
+  <div class="nav-links">
+    <a href="/swap" class="active">Swap</a>
+    <a href="/pools">Pools</a>
+    <a href="/">Home</a>
+    <button id="connectBtn"><span id="connectText">Connect Wallet</span></button>
+  </div>
+</nav>
+
+<div class="swap-page">
+  <!-- Network Badge -->
+  <div class="network-badge" id="networkBadge">
+    <span class="dot" id="networkDot"></span>
+    <span class="chain-name">Arc Testnet</span>
+    <span>·</span>
+    <span id="networkStatus">Disconnected</span>
+  </div>
+
+  <!-- Swap Card -->
+  <div class="swap-card">
+    <div class="swap-header">
+      <span class="swap-title">Swap</span>
+      <span class="slippage-badge" id="slippageBadge">0.5%</span>
+    </div>
+
+    <!-- FROM -->
+    <div class="input-group">
+      <div class="input-label">You pay</div>
+      <div class="input-row">
+        <input class="token-input" id="fromAmount" type="text" placeholder="0.0" inputmode="decimal">
+        <div class="token-selector" id="fromSelector">
+          <div class="token-icon token-usdc">$</div>
+          USDC
+        </div>
+      </div>
+      <div class="input-meta">
+        <span>Balance: <span id="fromBalance">0.00</span></span>
+        <button class="max-btn" id="maxBtn">MAX</button>
+      </div>
+    </div>
+
+    <!-- ARROW -->
+    <div class="arrow-divider">
+      <button class="arrow-btn" id="arrowBtn">↓</button>
+    </div>
+
+    <!-- TO -->
+    <div class="input-group">
+      <div class="input-label">You receive</div>
+      <div class="input-row">
+        <input class="token-input" id="toAmount" type="text" placeholder="0.0" readonly>
+        <div class="token-selector" id="toSelector">
+          <div class="token-icon token-arc">A</div>
+          ARC
+        </div>
+      </div>
+      <div class="input-meta">
+        <span>Balance: <span id="toBalance">0.00</span></span>
+      </div>
+    </div>
+
+    <!-- QUOTE DETAILS -->
+    <div class="quote-box" id="quoteBox">
+      <div class="quote-row"><span>Rate</span><span class="val" id="quoteRate">—</span></div>
+      <div class="quote-row"><span>Min. received</span><span class="val accent" id="quoteMin">—</span></div>
+      <div class="quote-row"><span>Price impact</span><span class="val green" id="quoteImpact">—</span></div>
+      <div class="quote-row"><span>Gas estimate</span><span class="val" id="quoteGas">—</span></div>
+      <div class="quote-row"><span>Route</span><span class="val">ArcRouter → ArcPair</span></div>
+    </div>
+
+    <!-- EXECUTE -->
+    <button class="swap-btn" id="swapBtn" disabled>Connect Wallet</button>
+
+    <!-- STATUS -->
+    <div class="status-bar" id="statusBar"></div>
+  </div>
+
+  <!-- TX HISTORY -->
+  <div class="history-section">
+    <div class="history-title">Recent Transactions</div>
+    <div id="txList">
+      <div class="history-empty">No transactions yet</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══ ARC DEX CONFIG ═══
+const ARC_CHAIN_ID = 5042002;
+const ARC_RPC = 'https://rpc.testnet.arc.network';
+const EXPLORER = 'https://testnet.arcscan.app';
+
+const CONTRACTS = {
+  router: '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0',
+  factory: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+  wusdc: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
+};
+
+const ROUTER_ABI = [
+  'function factory() view returns (address)',
+  'function WUSDC() view returns (address)',
+  'function getAmountsOut(uint256 amountIn, address[] memory path) view returns (uint256[] memory amounts)',
+  'function swapExactTokensForTokens(uint256 amountIn, uint256 amountOutMin, address[] memory path, address to, uint256 deadline) returns (uint256[] memory amounts)',
+];
+
+const ERC20_ABI = [
+  'function balanceOf(address) view returns (uint256)',
+  'function decimals() view returns (uint8)',
+  'function symbol() view returns (string)',
+  'function approve(address spender, uint256 amount) returns (bool)',
+  'function allowance(address owner, address spender) view returns (uint256)',
+];
+
+// Test tokens — update after deploying on Arc
+const TOKENS = {
+  USDC: { symbol: 'USDC', name: 'USDC (Gas)', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18 },
+  ARC:  { symbol: 'ARC', name: 'Arc Token', address: '0x0000000000000000000000000000000000000000', decimals: 18 },
+};
+
+// ═══ STATE ═══
+let provider = null;
+let signer = null;
+let walletAddress = null;
+let routerContract = null;
+let fromToken = TOKENS.USDC;
+let toToken = TOKENS.ARC;
+let txHistory = [];
+
+// ═══ DOM ═══
+const $ = (s) => document.querySelector(s);
+const fromAmountEl = $('#fromAmount');
+const toAmountEl = $('#toAmount');
+const fromBalanceEl = $('#fromBalance');
+const toBalanceEl = $('#toBalance');
+const quoteBox = $('#quoteBox');
+const swapBtn = $('#swapBtn');
+const statusBar = $('#statusBar');
+const connectBtn = $('#connectBtn');
+const connectText = $('#connectText');
+
+// ═══ WALLET ═══
+async function connectWallet() {
+  if (!window.ethereum) {
+    showStatus('Please install MetaMask!', 'error');
+    return;
+  }
+
+  try {
+    // Switch to Arc
+    try {
+      await window.ethereum.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x4CF7E2' }],
+      });
+    } catch (e) {
+      if (e.code === 4902) {
+        await window.ethereum.request({
+          method: 'wallet_addEthereumChain',
+          params: [{
+            chainId: '0x4CF7E2',
+            chainName: 'Arc Testnet',
+            nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
+            rpcUrls: [ARC_RPC],
+            blockExplorerUrls: [EXPLORER],
+          }],
+        });
+      }
+    }
+
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+    walletAddress = accounts[0];
+
+    routerContract = new ethers.Contract(CONTRACTS.router, ROUTER_ABI, signer);
+
+    updateWalletUI();
+    await updateBalances();
+    $('#networkStatus').textContent = walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4);
+
+    // Listen for changes
+    window.ethereum.on('accountsChanged', () => window.location.reload());
+    window.ethereum.on('chainChanged', () => window.location.reload());
+
+  } catch (err) {
+    console.error('Connect error:', err);
+    showStatus('Connection rejected', 'error');
+  }
+}
+
+function disconnectWallet() {
+  provider = null;
+  signer = null;
+  walletAddress = null;
+  routerContract = null;
+  updateWalletUI();
+}
+
+function updateWalletUI() {
+  if (walletAddress) {
+    connectBtn.classList.add('connected');
+    connectText.textContent = walletAddress.slice(0, 6) + '...' + walletAddress.slice(-4);
+    swapBtn.disabled = false;
+    swapBtn.textContent = fromAmountEl.value ? 'Swap' : 'Enter Amount';
+  } else {
+    connectBtn.classList.remove('connected');
+    connectText.textContent = 'Connect Wallet';
+    swapBtn.disabled = true;
+    swapBtn.textContent = 'Connect Wallet';
+  }
+}
+
+connectBtn.addEventListener('click', () => {
+  if (walletAddress) { disconnectWallet(); } else { connectWallet(); }
+});
+
+// ═══ BALANCES ═══
+async function updateBalances() {
+  if (!provider || !walletAddress) return;
+
+  // USDC balance (native gas token)
+  try {
+    const bal = await provider.getBalance(walletAddress);
+    fromBalanceEl.textContent = formatAmount(bal, 18);
+  } catch (e) {
+    fromBalanceEl.textContent = '0.00';
+  }
+
+  // ARC balance (if token deployed)
+  if (toToken.address !== '0x0000000000000000000000000000000000000000') {
+    try {
+      const arcContract = new ethers.Contract(toToken.address, ERC20_ABI, provider);
+      const bal = await arcContract.balanceOf(walletAddress);
+      toBalanceEl.textContent = formatAmount(bal, toToken.decimals);
+    } catch (e) {
+      toBalanceEl.textContent = '—';
+    }
+  }
+}
+
+// ═══ QUOTE ═══
+let quoteTimer = null;
+
+fromAmountEl.addEventListener('input', () => {
+  clearTimeout(quoteTimer);
+  const val = fromAmountEl.value.replace(/[^0-9.]/g, '');
+  fromAmountEl.value = val;
+
+  if (!val || parseFloat(val) === 0) {
+    toAmountEl.value = '';
+    quoteBox.classList.remove('visible');
+    swapBtn.textContent = walletAddress ? 'Enter Amount' : 'Connect Wallet';
+    return;
+  }
+
+  quoteTimer = setTimeout(() => getQuote(val), 300);
+});
+
+async function getQuote(amount) {
+  if (!walletAddress || !routerContract) return;
+
+  try {
+    const amountIn = ethers.parseUnits(amount, fromToken.decimals);
+    const path = [fromToken.address, toToken.address];
+
+    let amounts;
+    try {
+      amounts = await routerContract.getAmountsOut(amountIn, path);
+    } catch {
+      // Fallback: direct pair not found, show mock
+      toAmountEl.value = '—';
+      showStatus('No liquidity pool found for this pair', 'error');
+      return;
+    }
+
+    const outAmount = amounts[amounts.length - 1];
+    toAmountEl.value = formatAmount(outAmount, toToken.decimals);
+
+    // Update quote box
+    const rate = parseFloat(amount) / parseFloat(formatAmount(outAmount, toToken.decimals));
+    quoteBox.classList.add('visible');
+    $('#quoteRate').textContent = `1 ${toToken.symbol} = ${rate.toFixed(6)} ${fromToken.symbol}`;
+    $('#quoteMin').textContent = formatAmount(outAmount * 995n / 1000n, toToken.decimals) + ' ' + toToken.symbol;
+    $('#quoteImpact').textContent = '< 0.1%';
+    $('#quoteGas').textContent = '~150,000';
+
+    swapBtn.textContent = 'Swap';
+
+  } catch (err) {
+    console.error('Quote error:', err);
+    toAmountEl.value = '—';
+  }
+}
+
+// ═══ SWAP ═══
+swapBtn.addEventListener('click', async () => {
+  if (!walletAddress) { connectWallet(); return; }
+  if (!fromAmountEl.value || parseFloat(fromAmountEl.value) === 0) return;
+  await executeSwap();
+});
+
+async function executeSwap() {
+  const amount = fromAmountEl.value;
+  swapBtn.classList.add('loading');
+  swapBtn.textContent = 'Swapping...';
+
+  try {
+    const amountIn = ethers.parseUnits(amount, fromToken.decimals);
+    const amountOutMin = amountIn * 995n / 1000n; // 0.5% slippage
+    const path = [fromToken.address, toToken.address];
+    const deadline = Math.floor(Date.now() / 1000) + 300;
+
+    // Native USDC swap (gas token)
+    showStatus('Sending transaction...', 'pending');
+
+    const tx = await routerContract.swapExactTokensForTokens(
+      amountIn,
+      amountOutMin,
+      path,
+      walletAddress,
+      deadline,
+      { gasLimit: 300000 }
+    );
+
+    showStatus(`TX sent: ${tx.hash.slice(0, 10)}...${tx.hash.slice(-8)}`, 'pending');
+
+    // Add to history
+    addTxHistory('swap', `${amount} ${fromToken.symbol} → ${toToken.symbol}`, tx.hash, 'pending');
+
+    // Wait for confirmation
+    const receipt = await tx.wait();
+
+    if (receipt.status === 1) {
+      showStatus(`✓ Swap confirmed! ${tx.hash.slice(0, 10)}...${tx.hash.slice(-8)}`, 'success');
+      updateTxHistory(tx.hash, 'confirmed');
+      await updateBalances();
+      fromAmountEl.value = '';
+      toAmountEl.value = '';
+      quoteBox.classList.remove('visible');
+    } else {
+      showStatus('✗ Transaction failed', 'error');
+      updateTxHistory(tx.hash, 'failed');
+    }
+
+  } catch (err) {
+    console.error('Swap error:', err);
+    const msg = err.reason || err.message || 'Swap failed';
+    showStatus(`✗ ${msg}`, 'error');
+  }
+
+  swapBtn.classList.remove('loading');
+  swapBtn.textContent = walletAddress ? 'Swap' : 'Connect Wallet';
+}
+
+// ═══ UI HELPERS ═══
+function showStatus(msg, type) {
+  statusBar.className = 'status-bar visible ' + type;
+  statusBar.innerHTML = msg;
+}
+
+function addTxHistory(type, detail, hash, status) {
+  txHistory.unshift({ type, detail, hash, status });
+  renderTxHistory();
+}
+
+function updateTxHistory(hash, status) {
+  const tx = txHistory.find(t => t.hash === hash);
+  if (tx) tx.status = status;
+  renderTxHistory();
+}
+
+function renderTxHistory() {
+  const list = $('#txList');
+  if (txHistory.length === 0) {
+    list.innerHTML = '<div class="history-empty">No transactions yet</div>';
+    return;
+  }
+  list.innerHTML = txHistory.slice(0, 5).map(tx => `
+    <div class="tx-item">
+      <div class="tx-info">
+        <div class="tx-type">${tx.type === 'swap' ? '⟺' : '↗'} ${tx.detail}</div>
+        <div class="tx-detail">${tx.hash.slice(0, 14)}...${tx.hash.slice(-6)}</div>
+      </div>
+      <span class="tx-status ${tx.status}">
+        <a href="${EXPLORER}/tx/${tx.hash}" target="_blank">${tx.status}</a>
+      </span>
+    </div>
+  `).join('');
+}
+
+function formatAmount(wei, decimals) {
+  try {
+    return ethers.formatUnits(wei, decimals);
+  } catch {
+    return '0';
+  }
+}
+
+// Arrow swap
+$('#arrowBtn').addEventListener('click', () => {
+  [fromToken, toToken] = [toToken, fromToken];
+  // Update UI tokens
+  const fromSel = $('#fromSelector');
+  const toSel = $('#toSelector');
+  if (fromToken.symbol === 'USDC') {
+    fromSel.innerHTML = '<div class="token-icon token-usdc">$</div>USDC';
+    toSel.innerHTML = '<div class="token-icon token-arc">A</div>ARC';
+  } else {
+    fromSel.innerHTML = '<div class="token-icon token-arc">A</div>ARC';
+    toSel.innerHTML = '<div class="token-icon token-usdc">$</div>USDC';
+  }
+  // Swap amounts
+  const tmp = fromAmountEl.value;
+  fromAmountEl.value = toAmountEl.value;
+  toAmountEl.value = tmp;
+  if (fromAmountEl.value) getQuote(fromAmountEl.value);
+});
+
+// Max button
+$('#maxBtn').addEventListener('click', () => {
+  if (fromBalanceEl.textContent && fromBalanceEl.textContent !== '0.00') {
+    fromAmountEl.value = fromBalanceEl.textContent;
+    getQuote(fromAmountEl.value);
+  }
+});
+
+// Init
+if (window.ethereum) {
+  window.ethereum.on('accountsChanged', () => window.location.reload());
+  window.ethereum.on('chainChanged', () => window.location.reload());
+}
+</script>
+
+</body>
+</html>

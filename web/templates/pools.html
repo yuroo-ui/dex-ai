@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ArcDEX — Pools & Farms</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800;900&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.9.0/ethers.umd.min.js"></script>
+<style>
+:root{--bg:#000;--bg-elev:#0A0A0A;--bg-card:#0F0F0F;--hairline:#1F1F1F;--text:#FFF;--text-muted:#A3A3A3;--text-faint:#525252;--accent:#00E5FF;--accent-glow:rgba(0,229,255,.4);--green:#00E676;--red:#FF4444}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Geist',system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh}
+
+/* NAV */
+nav{padding:16px 32px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--hairline);background:rgba(0,0,0,.7);backdrop-filter:blur(24px);position:sticky;top:0;z-index:100}
+.nav-logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:18px;color:var(--text);text-decoration:none}
+.nav-logo svg{width:28px;height:28px}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--text-muted);text-decoration:none;font-size:14px;font-weight:500;transition:color 200ms}
+.nav-links a:hover,.nav-links a.active{color:var(--accent)}
+#connectBtn{background:var(--accent);color:var(--bg);padding:10px 20px;border-radius:999px;font-weight:600;border:none;cursor:pointer;font-size:14px;font-family:inherit;transition:box-shadow 300ms}
+#connectBtn:hover{box-shadow:0 0 24px var(--accent-glow)}
+#connectBtn.connected{background:var(--bg-card);color:var(--accent);border:1px solid var(--accent)}
+
+/* PAGE HEADER */
+.page-header{max-width:1280px;margin:0 auto;padding:48px 32px 0}
+.page-header h1{font-size:clamp(32px,4vw,48px);font-weight:800;letter-spacing:-.04em;margin-bottom:8px}
+.page-header p{color:var(--text-muted);font-size:16px}
+.header-stats{display:flex;gap:32px;margin-top:24px}
+.header-stat{text-align:center}
+.header-stat .val{font-size:24px;font-weight:700}
+.header-stat .val .accent{color:var(--accent);text-shadow:0 0 20px var(--accent-glow)}
+.header-stat .lbl{font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);margin-top:4px}
+
+/* TABS */
+.tabs{max-width:1280px;margin:0 auto;padding:32px 32px 0;display:flex;gap:4px}
+.tab{padding:10px 20px;border-radius:8px;font-size:14px;font-weight:500;color:var(--text-muted);cursor:pointer;border:none;background:transparent;font-family:inherit;transition:all 200ms}
+.tab:hover{color:var(--text)}
+.tab.active{background:var(--bg-card);color:var(--accent);border:1px solid var(--hairline)}
+
+/* ADD LIQUIDITY CTA */
+.add-cta{max-width:1280px;margin:0 auto;padding:24px 32px;display:flex;justify-content:space-between;align-items:center}
+.add-btn{background:var(--accent);color:var(--bg);padding:12px 24px;border-radius:999px;font-weight:600;border:none;cursor:pointer;font-size:14px;font-family:inherit;transition:box-shadow 300ms}
+.add-btn:hover{box-shadow:0 0 32px var(--accent-glow)}
+.search-input{background:var(--bg-card);border:1px solid var(--hairline);border-radius:10px;padding:10px 16px;color:var(--text);font-size:14px;font-family:inherit;width:280px;outline:none;transition:border-color 200ms}
+.search-input:focus{border-color:var(--accent)}
+.search-input::placeholder{color:var(--text-faint)}
+
+/* POOLS TABLE */
+.pools-section{max-width:1280px;margin:0 auto;padding:0 32px 80px}
+.pools-table{width:100%;border-collapse:collapse}
+.pools-table thead th{
+  font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text-faint);text-align:left;padding:12px 16px;border-bottom:1px solid var(--hairline);font-weight:500;
+}
+.pools-table thead th:last-child{text-align:right}
+.pools-table tbody tr{border-bottom:1px solid var(--hairline);transition:background 200ms;cursor:pointer}
+.pools-table tbody tr:hover{background:var(--bg-elev)}
+.pools-table tbody td{padding:20px 16px;vertical-align:middle}
+
+/* Pool pair cell */
+.pool-pair{display:flex;align-items:center;gap:12px}
+.pair-icons{display:flex}
+.pair-icons .icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--bg);border:2px solid var(--bg)}
+.pair-icons .icon:nth-child(2){margin-left:-8px}
+.pair-icons .usdc{background:#2775CA}
+.pair-icons .arc{background:var(--accent)}
+.pair-icons .wusdc{background:#FF6B00}
+.pair-name{font-weight:600;font-size:15px}
+.pair-tag{font-family:'Geist Mono',monospace;font-size:10px;color:var(--accent);background:rgba(0,229,255,.1);padding:2px 8px;border-radius:4px;margin-left:8px}
+
+/* TVL, Volume cells */
+.cell-value{font-weight:600;font-size:15px}
+.cell-sub{font-family:'Geist Mono',monospace;font-size:11px;color:var(--text-faint);margin-top:2px}
+
+/* APR */
+.apr-badge{font-weight:700;font-size:16px;color:var(--green)}
+.apr-badge.high{color:var(--accent)}
+
+/* ACTION */
+.pool-action{display:flex;justify-content:flex-end}
+.pool-action-btn{background:var(--bg-card);border:1px solid var(--hairline);border-radius:8px;padding:8px 16px;font-size:13px;font-weight:500;color:var(--text-muted);cursor:pointer;font-family:inherit;transition:all 200ms}
+.pool-action-btn:hover{border-color:var(--accent);color:var(--accent)}
+.pool-action-btn.primary{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+.pool-action-btn.primary:hover{box-shadow:0 0 20px var(--accent-glow)}
+
+/* LOADING / EMPTY */
+.pools-empty{text-align:center;padding:80px 32px;color:var(--text-faint)}
+.pools-empty .icon{font-size:48px;margin-bottom:16px;opacity:.3}
+.pools-empty p{font-size:14px;max-width:400px;margin:0 auto}
+.pools-loading{text-align:center;padding:80px 32px;color:var(--text-faint);font-family:'Geist Mono',monospace;font-size:13px}
+
+/* MARQUEE */
+.marquee-wrapper{overflow:hidden;padding:18px 0;border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline);background:var(--bg-elev);margin-top:40px}
+.marquee-track{display:flex;gap:48px;animation:marquee 35s linear infinite;width:max-content}
+.marquee-track span{font-family:'Geist Mono',monospace;font-size:12px;letter-spacing:.15em;text-transform:uppercase;color:var(--text-faint);white-space:nowrap}
+.marquee-track span.accent{color:var(--accent)}
+@keyframes marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  nav{padding:12px 16px}.nav-links{gap:12px}.nav-links a:not(#connectBtn){display:none}
+  .page-header{padding:32px 16px 0}.header-stats{flex-wrap:wrap;gap:16px}
+  .tabs{padding:24px 16px 0}.add-cta{padding:16px;flex-direction:column;gap:12px}
+  .search-input{width:100%}
+  .pools-section{padding:0 16px 60px}
+  .pools-table thead{display:none}
+  .pools-table tbody tr{display:block;padding:16px 0;border-bottom:1px solid var(--hairline)}
+  .pools-table tbody td{display:flex;justify-content:space-between;padding:4px 0}
+  .pools-table tbody td::before{content:attr(data-label);font-family:'Geist Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint)}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a href="/" class="nav-logo">
+    <svg viewBox="0 0 32 32" fill="none"><path d="M16 2L28 8V24L16 30L4 24V8L16 2Z" stroke="var(--accent)" stroke-width="2"/><path d="M16 8L22 11V21L16 24L10 21V11L16 8Z" fill="var(--accent)"/></svg>
+    ArcDEX
+  </a>
+  <div class="nav-links">
+    <a href="/swap">Swap</a>
+    <a href="/pools" class="active">Pools</a>
+    <a href="/">Home</a>
+    <button id="connectBtn"><span id="connectText">Connect Wallet</span></button>
+  </div>
+</nav>
+
+<!-- PAGE HEADER -->
+<div class="page-header">
+  <h1>Liquidity Pools</h1>
+  <p>Provide liquidity, earn trading fees. Farm ARC rewards.</p>
+  <div class="header-stats">
+    <div class="header-stat"><div class="val">$<span class="accent" id="totalTVL">—</span></div><div class="lbl">Total TVL</div></div>
+    <div class="header-stat"><div class="val">$<span class="accent" id="totalVol">—</span></div><div class="lbl">24h Volume</div></div>
+    <div class="header-stat"><div class="val"><span class="accent" id="totalFees">—</span></div><div class="lbl">24h Fees</div></div>
+    <div class="header-stat"><div class="val"><span class="accent" id="totalPairs">—</span></div><div class="lbl">Active Pairs</div></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" data-tab="pools">All Pools</button>
+  <button class="tab" data-tab="farms">Farms</button>
+  <button class="tab" data-tab="my">My Positions</button>
+</div>
+
+<!-- ADD / SEARCH -->
+<div class="add-cta">
+  <button class="add-btn" id="addLiqBtn">+ Add Liquidity</button>
+  <input class="search-input" id="searchInput" placeholder="Search pools..." type="text">
+</div>
+
+<!-- POOLS TABLE -->
+<div class="pools-section">
+  <div id="poolsContainer">
+    <div class="pools-loading" id="loadingState">
+      <p>⟐ Loading pools from Arc Network...</p>
+    </div>
+  </div>
+</div>
+
+<!-- MARQUEE -->
+<div class="marquee-wrapper">
+  <div class="marquee-track">
+    <span class="accent">// POOLS</span><span>ARC/USDC</span>
+    <span class="accent">// FARMING</span><span>EARN ARC</span>
+    <span class="accent">// ON-CHAIN</span><span>REAL RESERVES</span>
+    <span class="accent">// ZERO FEES</span><span>NO HIDDEN COSTS</span>
+    <span class="accent">// POOLS</span><span>ARC/USDC</span>
+    <span class="accent">// FARMING</span><span>EARN ARC</span>
+    <span class="accent">// ON-CHAIN</span><span>REAL RESERVES</span>
+    <span class="accent">// ZERO FEES</span><span>NO HIDDEN COSTS</span>
+  </div>
+</div>
+
+<script>
+// ═══ CONFIG ═══
+const ARC_CHAIN_ID = 5042002;
+const ARC_RPC = 'https://rpc.testnet.arc.network';
+const EXPLORER = 'https://testnet.arcscan.app';
+
+const CONTRACTS = {
+  router: '0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0',
+  factory: '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+  wusdc: '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512',
+};
+
+const FACTORY_ABI = [
+  'function allPairsLength() view returns (uint256)',
+  'function getPair(address tokenA, address tokenB) view returns (address pair)',
+  'function allPairs(uint256 index) view returns (address pair)',
+];
+
+const PAIR_ABI = [
+  'function getReserves() view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)',
+  'function token0() view returns (address)',
+  'function token1() view returns (address)',
+  'function totalSupply() view returns (uint256)',
+  'function balanceOf(address) view returns (uint256)',
+];
+
+const ERC20_ABI = [
+  'function symbol() view returns (string)',
+  'function decimals() view returns (uint8)',
+  'function name() view returns (string)',
+];
+
+// Token registry — expand as tokens are deployed
+const KNOWN_TOKENS = {
+  '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE': { symbol: 'USDC', decimals: 18, color: '#2775CA' },
+  '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512': { symbol: 'WUSDC', decimals: 18, color: '#FF6B00' },
+};
+
+const $ = (s) => document.querySelector(s);
+
+let provider = null;
+let signer = null;
+let walletAddress = null;
+let factoryContract = null;
+let pools = [];
+
+// ═══ WALLET ═══
+async function connectWallet() {
+  if (!window.ethereum) { alert('Install MetaMask!'); return; }
+  try {
+    try {
+      await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x4CF7E2' }] });
+    } catch (e) {
+      if (e.code === 4902) {
+        await window.ethereum.request({ method: 'wallet_addEthereumChain', params: [{
+          chainId: '0x4CF7E2', chainName: 'Arc Testnet',
+          nativeCurrency: { name: 'USDC', symbol: 'USDC', decimals: 18 },
+          rpcUrls: [ARC_RPC], blockExplorerUrls: [EXPLORER],
+        }]});
+      }
+    }
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    provider = new ethers.BrowserProvider(window.ethereum);
+    signer = await provider.getSigner();
+    walletAddress = accounts[0];
+    factoryContract = new ethers.Contract(CONTRACTS.factory, FACTORY_ABI, signer);
+    updateWalletUI();
+    loadPools();
+  } catch (err) { console.error(err); }
+}
+
+function updateWalletUI() {
+  const btn = $('#connectBtn');
+  const text = $('#connectText');
+  if (walletAddress) {
+    btn.classList.add('connected');
+    text.textContent = walletAddress.slice(0,6) + '...' + walletAddress.slice(-4);
+  } else {
+    btn.classList.remove('connected');
+    text.textContent = 'Connect Wallet';
+  }
+}
+
+$('#connectBtn').addEventListener('click', () => {
+  if (walletAddress) { walletAddress = null; provider = null; signer = null; updateWalletUI(); }
+  else connectWallet();
+});
+
+// ═══ LOAD POOLS ═══
+async function loadPools() {
+  const container = $('#poolsContainer');
+  const loading = $('#loadingState');
+
+  if (!factoryContract) {
+    // No wallet — show demo data
+    renderDemoPools();
+    return;
+  }
+
+  try {
+    const pairsLength = await factoryContract.allPairsLength();
+    const count = Number(pairsLength);
+
+    if (count === 0) {
+      renderDemoPools();
+      return;
+    }
+
+    pools = [];
+    for (let i = 0; i < Math.min(count, 20); i++) {
+      const pairAddr = await factoryContract.allPairs(i);
+      const pair = new ethers.Contract(pairAddr, PAIR_ABI, provider);
+      const reserves = await pair.getReserves();
+      const token0Addr = await pair.token0();
+      const token1Addr = await pair.token1();
+
+      // Get token info
+      const t0 = await getTokenInfo(token0Addr);
+      const t1 = await getTokenInfo(token1Addr);
+
+      pools.push({
+        address: pairAddr,
+        token0: t0,
+        token1: t1,
+        reserve0: ethers.formatUnits(reserves[0], t0.decimals),
+        reserve1: ethers.formatUnits(reserves[1], t1.decimals),
+        tvl: calculateTVL(t0, t1, reserves),
+        apr: (Math.random() * 50 + 5).toFixed(1), // placeholder APR
+      });
+    }
+
+    renderPools(pools);
+
+  } catch (err) {
+    console.error('Load pools error:', err);
+    renderDemoPools();
+  }
+}
+
+async function getTokenInfo(addr) {
+  if (KNOWN_TOKENS[addr]) return { ...KNOWN_TOKENS[addr], address: addr };
+  try {
+    const contract = new ethers.Contract(addr, ERC20_ABI, provider);
+    const [symbol, decimals] = await Promise.all([contract.symbol(), contract.decimals()]);
+    return { symbol, decimals: Number(decimals), address: addr, color: '#888' };
+  } catch {
+    return { symbol: addr.slice(0,6), decimals: 18, address: addr, color: '#888' };
+  }
+}
+
+function calculateTVL(t0, t1, reserves) {
+  // Simplified TVL — assumes USDC = $1
+  const r0 = parseFloat(ethers.formatUnits(reserves[0], t0.decimals));
+  const r1 = parseFloat(ethers.formatUnits(reserves[1], t1.decimals));
+  if (t0.symbol === 'USDC' || t0.symbol === 'WUSDC') return (r0 * 2).toFixed(2);
+  if (t1.symbol === 'USDC' || t1.symbol === 'WUSDC') return (r1 * 2).toFixed(2);
+  return (r0 + r1).toFixed(2);
+}
+
+// ═══ RENDER ═══
+function renderPools(poolList) {
+  const container = $('#poolsContainer');
+  const $ = (s) => document.querySelector(s);
+
+  // Update header stats
+  const totalTVL = poolList.reduce((s, p) => s + parseFloat(p.tvl || 0), 0);
+  $('#totalTVL').textContent = totalTVL > 1000 ? (totalTVL / 1000).toFixed(1) + 'K' : totalTVL.toFixed(2);
+  $('#totalVol').textContent = (totalTVL * 0.7).toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  $('#totalFees').textContent = (totalTVL * 0.003).toFixed(2);
+  $('#totalPairs').textContent = poolList.length;
+
+  if (poolList.length === 0) {
+    container.innerHTML = `
+      <div class="pools-empty">
+        <div class="icon">⬡</div>
+        <p>No pools found. Create the first pool by adding liquidity to any token pair.</p>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="pools-table">
+      <thead><tr>
+        <th>Pool</th><th>TVL</th><th>24h Volume</th><th>APR</th><th></th>
+      </tr></thead>
+      <tbody>
+        ${poolList.map(p => `
+          <tr>
+            <td data-label="Pool">
+              <div class="pool-pair">
+                <div class="pair-icons">
+                  <div class="icon ${p.token0.symbol.toLowerCase()}" style="background:${p.token0.color}">${p.token0.symbol.slice(0,2)}</div>
+                  <div class="icon ${p.token1.symbol.toLowerCase()}" style="background:${p.token1.color}">${p.token1.symbol.slice(0,2)}</div>
+                </div>
+                <span class="pair-name">${p.token0.symbol}/${p.token1.symbol}</span>
+                <span class="pair-tag">0.3%</span>
+              </div>
+            </td>
+            <td data-label="TVL">
+              <div class="cell-value">$${formatNum(p.tvl)}</div>
+              <div class="cell-sub">${formatNum(p.reserve0)} ${p.token0.symbol}</div>
+            </td>
+            <td data-label="Volume">
+              <div class="cell-value">$${formatNum(parseFloat(p.tvl) * 0.15)}</div>
+              <div class="cell-sub">fees: $${formatNum(parseFloat(p.tvl) * 0.003)}</div>
+            </td>
+            <td data-label="APR">
+              <span class="apr-badge ${parseFloat(p.apr) > 30 ? 'high' : ''}">${p.apr}%</span>
+            </td>
+            <td data-label="">
+              <div class="pool-action">
+                <button class="pool-action-btn primary" onclick="window.location.href='/swap'">Add</button>
+              </div>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+}
+
+function renderDemoPools() {
+  const demoPools = [
+    { token0: { symbol: 'USDC', decimals: 18, color: '#2775CA' }, token1: { symbol: 'ARC', decimals: 18, color: '#00E5FF' }, tvl: '12400000', reserve0: '6200000', reserve1: '88800000', apr: '42.5' },
+    { token0: { symbol: 'USDC', decimals: 18, color: '#2775CA' }, token1: { symbol: 'WUSDC', decimals: 18, color: '#FF6B00' }, tvl: '3200000', reserve0: '1600000', reserve1: '1600000', apr: '12.3' },
+    { token0: { symbol: 'ARC', decimals: 18, color: '#00E5FF' }, token1: { symbol: 'WUSDC', decimals: 18, color: '#FF6B00' }, tvl: '890000', reserve0: '445000', reserve1: '445000', apr: '78.2' },
+  ];
+  pools = demoPools;
+  renderPools(demoPools);
+  $('#totalTVL').textContent = '16.5M';
+  $('#totalVol').textContent = '8,700,000';
+  $('#totalFees').textContent = '26,100';
+  $('#totalPairs').textContent = '3';
+}
+
+function formatNum(n) {
+  const num = parseFloat(n);
+  if (isNaN(num)) return '0';
+  if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+  if (num >= 1e3) return (num / 1e3).toFixed(2) + 'K';
+  return num.toFixed(2);
+}
+
+// ═══ TABS ═══
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    const tabName = tab.dataset.tab;
+    if (tabName === 'pools') renderPools(pools.length ? pools : [{ token0:{symbol:'USDC',color:'#2775CA'}, token1:{symbol:'ARC',color:'#00E5FF'}, tvl:'12400000', reserve0:'6200000', reserve1:'88800000', apr:'42.5' }]);
+    else if (tabName === 'farms') $('#poolsContainer').innerHTML = '<div class="pools-empty"><div class="icon">🌾</div><p>Farms coming soon. Stake LP tokens to earn ARC rewards.</p></div>';
+    else if (tabName === 'my') {
+      if (!walletAddress) $('#poolsContainer').innerHTML = '<div class="pools-empty"><div class="icon">🔗</div><p>Connect wallet to view your liquidity positions.</p></div>';
+      else $('#poolsContainer').innerHTML = '<div class="pools-empty"><div class="icon">📭</div><p>No liquidity positions found. Add liquidity to get started.</p></div>';
+    }
+  });
+});
+
+// ═══ SEARCH ═══
+$('#searchInput').addEventListener('input', (e) => {
+  const q = e.target.value.toLowerCase();
+  const filtered = pools.filter(p =>
+    p.token0.symbol.toLowerCase().includes(q) ||
+    p.token1.symbol.toLowerCase().includes(q)
+  );
+  if (q && filtered.length === 0) {
+    $('#poolsContainer').innerHTML = '<div class="pools-empty"><div class="icon">🔍</div><p>No pools match your search.</p></div>';
+  } else if (q) {
+    renderPools(filtered);
+  } else {
+    renderPools(pools);
+  }
+});
+
+// Load on start
+renderDemoPools();
+</script>
+
+</body>
+</html>

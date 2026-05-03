@@ -20,6 +20,16 @@ async def home():
     return (BASE / "templates" / "dex.html").read_text()
 
 
+@app.get("/swap", response_class=HTMLResponse)
+async def swap_page():
+    return (BASE / "templates" / "swap.html").read_text()
+
+
+@app.get("/pools", response_class=HTMLResponse)
+async def pools_page():
+    return (BASE / "templates" / "pools.html").read_text()
+
+
 # ─── API ───
 @app.get("/health")
 async def health():

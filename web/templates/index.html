@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>dex-ai — Agent Skill Marketplace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+
+<!-- ═══ NAV ═══ -->
+<nav class="nav">
+    <div class="nav-inner">
+        <a href="/" class="logo">
+            <svg width="28" height="28" viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="none" stroke="#6366f1" stroke-width="2"/><path d="M8 14h12M14 8v12" stroke="#6366f1" stroke-width="2"/></svg>
+            <span>dex<span class="logo-accent">-ai</span></span>
+        </a>
+        <div class="nav-links">
+            <a href="#" class="nav-link active">Explore</a>
+            <a href="https://github.com/yuroo-ui/dex-ai" target="_blank" class="nav-link">GitHub</a>
+            <a href="#docs" class="nav-link">Docs</a>
+            <button class="btn-connect" id="installBtn">
+                <span class="btn-dot"></span>
+                Install CLI
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- ═══ HERO ═══ -->
+<section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-content">
+        <div class="hero-badge">🧩 Agent-to-Agent Skill Marketplace</div>
+        <h1>Swap skills across <span class="gradient-text">every AI agent</span></h1>
+        <p class="hero-sub">Discover, install, and share SKILL.md files. One CLI command. Any agent.</p>
+
+        <!-- Search Bar (Uniswap-style) -->
+        <div class="search-card">
+            <div class="search-input-wrap">
+                <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input type="text" id="searchInput" placeholder="Search skills, plugins, or chains..." autocomplete="off">
+                <button class="search-clear" id="searchClear" style="display:none">×</button>
+            </div>
+        </div>
+
+        <div class="hero-stats" id="heroStats">
+            <!-- populated by JS -->
+        </div>
+    </div>
+</section>
+
+<!-- ═══ PLUGINS GRID ═══ -->
+<section class="section">
+    <div class="container">
+        <div class="section-header">
+            <h2>Plugins</h2>
+            <div class="section-tabs">
+                <button class="tab active" data-filter="all">All</button>
+                <button class="tab" data-filter="trading">Trading</button>
+                <button class="tab" data-filter="bridge">Bridge</button>
+                <button class="tab" data-filter="defi">DeFi</button>
+                <button class="tab" data-filter="analytics">Analytics</button>
+            </div>
+        </div>
+        <div class="plugins-grid" id="pluginsGrid">
+            <!-- populated by JS -->
+        </div>
+    </div>
+</section>
+
+<!-- ═══ SKILLS TABLE ═══ -->
+<section class="section section-dark">
+    <div class="container">
+        <div class="section-header">
+            <h2>All Skills</h2>
+            <span class="badge" id="skillCount">0 skills</span>
+        </div>
+        <div class="skills-table-wrap">
+            <table class="skills-table">
+                <thead>
+                    <tr>
+                        <th>Skill</th>
+                        <th>Plugin</th>
+                        <th>Description</th>
+                        <th>Install</th>
+                    </tr>
+                </thead>
+                <tbody id="skillsTable">
+                    <!-- populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+<!-- ═══ INSTALL MODAL ═══ -->
+<div class="modal-overlay" id="installModal" style="display:none">
+    <div class="modal">
+        <div class="modal-header">
+            <h3>Install Skills</h3>
+            <button class="modal-close" id="modalClose">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="install-section">
+                <h4>npm / npx</h4>
+                <pre><code>npx skills add yuroo-ui/dex-ai</code></pre>
+            </div>
+            <div class="install-section">
+                <h4>Claude Code Marketplace</h4>
+                <pre><code>/plugin marketplace add yuroo-ui/dex-ai
+/plugin install dex-trading</code></pre>
+            </div>
+            <div class="install-section">
+                <h4>Install a single skill</h4>
+                <pre><code>agent-self skill install github:yuroo-ui/dex-ai/packages/plugins/dex-trading/skills/swap-integration/SKILL.md</code></pre>
+            </div>
+            <div class="install-section">
+                <h4>From URL</h4>
+                <pre><code>agent-self skill install https://raw.githubusercontent.com/yuroo-ui/dex-ai/main/packages/plugins/dex-bridge/skills/bridge-lifi/SKILL.md</code></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="footer">
+    <div class="container footer-inner">
+        <div class="footer-brand">
+            <svg width="24" height="24" viewBox="0 0 28 28"><circle cx="14" cy="14" r="12" fill="none" stroke="#6366f1" stroke-width="2"/><path d="M8 14h12M14 8v12" stroke="#6366f1" stroke-width="2"/></svg>
+            <span>dex-ai</span>
+        </div>
+        <div class="footer-links">
+            <a href="https://github.com/yuroo-ui/dex-ai" target="_blank">GitHub</a>
+            <a href="https://github.com/yuroo-ui/dex-ai/blob/main/docs/OVERVIEW.md" target="_blank">Docs</a>
+            <a href="/api/plugins" target="_blank">API</a>
+        </div>
+    </div>
+</footer>
+
+<script src="/static/js/app.js"></script>
+</body>
+</html>

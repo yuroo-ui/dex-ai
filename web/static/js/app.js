@@ -1,204 +1,469 @@
-/* ═══ dex-ai App JS ═══ */
+// ═══ MAIN APP ═══
 
-const PLUGINS_META = {
-  'dex-trading':  { icon: '🔄', desc: 'Swap & routing integration — Router, SDK, MEV protection', cat: 'trading' },
-  'dex-hooks':    { icon: '🪝', desc: 'Custom DEX hook development for advanced pool logic', cat: 'trading' },
-  'dex-analytics':{ icon: '📊', desc: 'On-chain analytics, price feeds, oracle integration', cat: 'analytics' },
-  'dex-defi':     { icon: '🏦', desc: 'Lending, liquidity, yield optimization, composability', cat: 'defi' },
-  'dex-bridge':   { icon: '🌉', desc: 'Cross-chain bridge & swap via Li.Fi, Relay, and more', cat: 'bridge' },
-};
+// ─── State ───
+let currentPage = 'swap';
+let currentModal = null; // 'fromToken' | 'toToken' | 'bridgeFromToken' | 'bridgeToToken' | 'network' | 'settings'
+let modalNetworkTarget = null;
 
-let allPlugins = [];
-let allSkills = [];
-let activeFilter = 'all';
-
-// ─── Fetch Data ───
-async function loadData() {
-  const [pRes, sRes] = await Promise.all([fetch('/api/plugins'), fetch('/api/skills')]);
-  const pData = await pRes.json();
-  const sData = await sRes.json();
-  allPlugins = pData.plugins || [];
-  allSkills = sData.skills || [];
-  renderStats();
-  renderPlugins();
-  renderSkills();
-  updateSwapSelects();
-}
-
-// ─── Stats ───
-function renderStats() {
-  document.getElementById('statsBar').innerHTML = `
-    <div class="stat-item"><div class="stat-val">${allPlugins.length}</div><div class="stat-label">Plugins</div></div>
-    <div class="stat-item"><div class="stat-val">${allSkills.length}</div><div class="stat-label">Skills</div></div>
-    <div class="stat-item"><div class="stat-val">30+</div><div class="stat-label">Chains</div></div>
-    <div class="stat-item"><div class="stat-val">4</div><div class="stat-label">Bridges</div></div>
-  `;
-}
-
-// ─── Plugins ───
-function renderPlugins(filter = 'all', search = '') {
-  const grid = document.getElementById('pluginsGrid');
-  let plugins = allPlugins;
-
-  if (filter !== 'all') {
-    plugins = plugins.filter(p => PLUGINS_META[p.name]?.cat === filter);
-  }
-  if (search) {
-    const q = search.toLowerCase();
-    plugins = plugins.filter(p =>
-      p.name.includes(q) || p.skills.some(s => s.toLowerCase().includes(q))
-    );
-  }
-
-  grid.innerHTML = plugins.map(p => {
-    const meta = PLUGINS_META[p.name] || { icon: '📦', desc: '' };
-    return `
-      <div class="plugin-card">
-        <div class="plugin-card-top">
-          <div class="plugin-name">
-            <span class="plugin-icon">${meta.icon}</span>
-            ${p.name}
-          </div>
-          <span class="plugin-badge">${p.skill_count} skills</span>
-        </div>
-        <div class="plugin-desc">${meta.desc}</div>
-        <div class="plugin-skills">
-          ${p.skills.map(s => `<span class="skill-tag" data-skill="${s}">${s}</span>`).join('')}
-        </div>
-        <div class="plugin-footer">
-          <span class="plugin-install" data-cmd="/plugin install ${p.name}">/plugin install ${p.name}</span>
-        </div>
-      </div>
-    `;
-  }).join('');
-
-  // Click handlers for skill tags
-  grid.querySelectorAll('.skill-tag').forEach(tag => {
-    tag.addEventListener('click', () => {
-      document.getElementById('toSkill').value = tag.dataset.skill;
-      updateCommand();
-      document.getElementById('swapInstallBtn').scrollIntoView({ behavior: 'smooth', block: 'center' });
-    });
-  });
-
-  // Click handlers for install commands
-  grid.querySelectorAll('.plugin-install').forEach(el => {
-    el.addEventListener('click', () => copyToClipboard(el.dataset.cmd, 'Copied!'));
-  });
-}
-
-// ─── Skills Table ───
-function renderSkills(search = '') {
-  const tbody = document.getElementById('skillsTable');
-  let skills = allSkills;
-
-  if (search) {
-    const q = search.toLowerCase();
-    skills = skills.filter(s =>
-      s.name.toLowerCase().includes(q) ||
-      s.plugin.includes(q) ||
-      (s.description && s.description.toLowerCase().includes(q))
-    );
-  }
-
-  document.getElementById('skillCount').textContent = skills.length;
-
-  tbody.innerHTML = skills.map(s => `
-    <tr>
-      <td><span class="skill-name">${s.name}</span></td>
-      <td><span class="plugin-tag">${s.plugin}</span></td>
-      <td><span class="desc">${s.description || '—'}</span></td>
-      <td><span class="install-cmd" data-path="${s.path}">/install ${s.name}</span></td>
-    </tr>
-  `).join('');
-
-  tbody.querySelectorAll('.install-cmd').forEach(el => {
-    el.addEventListener('click', () => {
-      const cmd = `agent-self skill install github:yuroo-ui/dex-ai/${el.dataset.path}`;
-      copyToClipboard(cmd, 'Copied!');
-    });
-  });
-}
-
-// ─── Swap Card Logic ───
-const PLUGIN_SKILLS = {};
-function updateSwapSelects() {
-  const fromEl = document.getElementById('fromPlugin');
-  const toEl = document.getElementById('toSkill');
-
-  allPlugins.forEach(p => {
-    PLUGIN_SKILLS[p.name] = p.skills;
-  });
-
-  fromEl.addEventListener('change', () => {
-    const plugin = fromEl.value;
-    const skills = PLUGIN_SKILLS[plugin] || [];
-    toEl.innerHTML = skills.map(s => `<option value="${s}">${s}</option>`).join('');
-    updateCommand();
-  });
-
-  toEl.addEventListener('change', updateCommand);
-  updateCommand();
-}
-
-function updateCommand() {
-  const plugin = document.getElementById('fromPlugin')?.value || 'dex-trading';
-  const skill = document.getElementById('toSkill')?.value || '';
-  const cmd = skill
-    ? `agent-self skill install github:yuroo-ui/dex-ai/packages/plugins/${plugin}/skills/${skill}/SKILL.md`
-    : `npx skills add yuroo-ui/dex-ai`;
-  document.getElementById('commandText').textContent = cmd;
-}
-
-// Swap Install Button
-document.getElementById('swapInstallBtn')?.addEventListener('click', () => {
-  const cmd = document.getElementById('commandText').textContent;
-  copyToClipboard(cmd, 'Command copied!');
-});
-
-// ─── Copy ───
-function copyToClipboard(text, msg = 'Copied!') {
-  navigator.clipboard.writeText(text).then(() => showToast(msg));
-}
-
-document.getElementById('copyBtn')?.addEventListener('click', () => {
-  copyToClipboard(document.getElementById('commandText').textContent);
-});
-
-// ─── Toast ───
-function showToast(msg) {
-  const toast = document.getElementById('toast');
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2000);
-}
-
-// ─── Tabs ───
-document.querySelectorAll('.tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    activeFilter = tab.dataset.filter;
-    renderPlugins(activeFilter, document.getElementById('skillSearch')?.value || '');
-  });
-});
-
-// ─── Search ───
-document.getElementById('skillSearch')?.addEventListener('input', (e) => {
-  renderSkills(e.target.value);
-});
-
-// ─── Install Modal ───
-const installModal = document.getElementById('installModal');
-document.getElementById('installBtn')?.addEventListener('click', () => {
-  installModal.style.display = 'flex';
-});
-document.getElementById('modalClose')?.addEventListener('click', () => {
-  installModal.style.display = 'none';
-});
-installModal?.addEventListener('click', (e) => {
-  if (e.target === installModal) installModal.style.display = 'none';
-});
+// ─── DOM Refs ───
+const $ = (s) => document.querySelector(s);
+const $$ = (s) => document.querySelectorAll(s);
 
 // ─── Init ───
-loadData();
+document.addEventListener('DOMContentLoaded', () => {
+  Wallet.initListeners();
+  initNav();
+  initSwap();
+  initBridge();
+  initModals();
+  initSettings();
+  // Set default tokens
+  loadDefaultTokens();
+});
+
+// ─── Nav ───
+function initNav() {
+  $$('.nav-link').forEach((link) => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const page = link.dataset.page;
+      if (!page) return;
+      currentPage = page;
+      $$('.nav-link').forEach((l) => l.classList.remove('active'));
+      link.classList.add('active');
+      $$('.page').forEach((p) => p.classList.remove('active'));
+      $(`#page-${page}`).classList.add('active');
+    });
+  });
+
+  // Connect button
+  $('#connectBtn').addEventListener('click', async () => {
+    if (Wallet.address) {
+      openWalletDrawer();
+    } else {
+      await Wallet.connect();
+    }
+  });
+
+  // Wallet drawer
+  $('#walletDrawerClose').addEventListener('click', closeWalletDrawer);
+  $('#walletDrawer').addEventListener('click', (e) => {
+    if (e.target === $('#walletDrawer')) closeWalletDrawer();
+  });
+  $('#disconnectBtn').addEventListener('click', () => {
+    Wallet.disconnect();
+    closeWalletDrawer();
+  });
+}
+
+function openWalletDrawer() {
+  const d = $('#walletDrawer');
+  d.style.display = 'flex';
+  $('#walletAddress').textContent = Wallet.address;
+  $('#walletBalance').textContent = parseFloat(Wallet.balance).toFixed(4) + ' ETH';
+  const net = NETWORKS[Wallet.chainId];
+  $('#walletNetwork').textContent = net ? net.name : `Chain ${Wallet.chainId}`;
+}
+function closeWalletDrawer() { $('#walletDrawer').style.display = 'none'; }
+
+// ─── Swap ───
+function initSwap() {
+  // Amount input
+  $('#fromAmount').addEventListener('input', debounce(async () => {
+    const val = $('#fromAmount').value;
+    if (!val || val === '0') {
+      $('#toAmount').value = '';
+      $('#quoteInfo').style.display = 'none';
+      updateSwapBtn();
+      return;
+    }
+    const quote = await Swap.getQuote(val);
+    if (quote) {
+      const formatted = formatAmount(quote.toAmount, Swap.toToken.decimals);
+      const display = parseFloat(formatted).toFixed(6);
+      $('#toAmount').value = display;
+      $('#quoteInfo').style.display = 'block';
+      $('#quoteRate').textContent = `1 ${Swap.fromToken.symbol} = ${(parseFloat(display) / parseFloat(val)).toFixed(6)} ${Swap.toToken.symbol}`;
+      $('#quoteRoute').textContent = quote.route;
+      $('#quoteSlippage').textContent = Swap.slippage + '%';
+    } else {
+      $('#toAmount').value = '—';
+      $('#quoteInfo').style.display = 'none';
+    }
+    updateSwapBtn();
+  }, 400));
+
+  // Swap direction
+  $('#swapDirectionBtn').addEventListener('click', () => {
+    [Swap.fromToken, Swap.toToken] = [Swap.toToken, Swap.fromToken];
+    [Swap.fromChain, Swap.toChain] = [Swap.toChain, Swap.fromChain];
+    updateTokenUI('from');
+    updateTokenUI('to');
+    // Re-trigger quote
+    $('#fromAmount').dispatchEvent(new Event('input'));
+  });
+
+  // Token select
+  $('#fromTokenBtn').addEventListener('click', () => openTokenModal('fromToken'));
+  $('#toTokenBtn').addEventListener('click', () => openTokenModal('toToken'));
+
+  // Swap button
+  $('#swapBtn').addEventListener('click', async () => {
+    if (!Wallet.address) {
+      await Wallet.connect();
+      if (!Wallet.address) return;
+    }
+    if (!Swap.fromToken || !Swap.toToken || !$('#fromAmount').value) return;
+    const btn = $('#swapBtn');
+    btn.textContent = 'Confirming...';
+    btn.classList.add('loading');
+    await Swap.execute();
+    btn.textContent = 'Swap';
+    btn.classList.remove('loading');
+  });
+
+  // Network selector
+  $('#networkBtn').addEventListener('click', () => openNetworkModal('swap'));
+}
+
+function loadDefaultTokens() {
+  const tokens = getTokensForChain(1);
+  Swap.fromToken = tokens[0]; // ETH
+  Swap.toToken = tokens[1];  // USDC
+  updateTokenUI('from');
+  updateTokenUI('to');
+  // Bridge defaults
+  const arbTokens = getTokensForChain(42161);
+  Bridge.fromToken = tokens[1]; // USDC on ETH
+  Bridge.toToken = arbTokens[1]; // USDC on ARB
+  updateBridgeTokenUI('from');
+  updateBridgeTokenUI('to');
+  // Set balance display
+  updateBalances();
+}
+
+function updateTokenUI(side) {
+  const token = side === 'from' ? Swap.fromToken : Swap.toToken;
+  if (!token) return;
+  $(side === 'from' ? '#fromTokenSymbol' : '#toTokenSymbol').textContent = token.symbol;
+  const icon = $(side === 'from' ? '#fromTokenIcon' : '#toTokenIcon');
+  if (token.icon) { icon.src = token.icon; icon.style.display = 'block'; }
+}
+
+function updateSwapBtn() {
+  const btn = $('#swapBtn');
+  if (!Wallet.address) { btn.textContent = 'Connect Wallet'; btn.disabled = false; return; }
+  if (!Swap.fromToken || !Swap.toToken) { btn.textContent = 'Select Token'; btn.disabled = true; return; }
+  if (!$('#fromAmount').value) { btn.textContent = 'Enter Amount'; btn.disabled = true; return; }
+  btn.textContent = `Swap ${Swap.fromToken.symbol} → ${Swap.toToken.symbol}`;
+  btn.disabled = false;
+}
+
+// ─── Bridge ───
+function initBridge() {
+  $('#bridgeFromAmount').addEventListener('input', debounce(async () => {
+    const val = $('#bridgeFromAmount').value;
+    if (!val || val === '0') {
+      $('#bridgeToAmount').value = '';
+      $('#bridgeQuoteInfo').style.display = 'none';
+      updateBridgeBtn();
+      return;
+    }
+    const quote = await Bridge.getQuote(val);
+    if (quote) {
+      const formatted = formatAmount(quote.toAmount, Bridge.toToken.decimals);
+      $('#bridgeToAmount').value = parseFloat(formatted).toFixed(6);
+      $('#bridgeQuoteInfo').style.display = 'block';
+      $('#bridgeQuoteProvider').textContent = quote.provider;
+      $('#bridgeQuoteTime').textContent = `~${Math.round(quote.estimateTime / 60)} min`;
+      $('#bridgeQuoteFee').textContent = quote.fee;
+    } else {
+      $('#bridgeToAmount').value = '—';
+      $('#bridgeQuoteInfo').style.display = 'none';
+    }
+    updateBridgeBtn();
+  }, 400));
+
+  // Provider toggle
+  $$('.provider-badge').forEach((badge) => {
+    badge.addEventListener('click', () => {
+      $$('.provider-badge').forEach((b) => b.classList.remove('active'));
+      badge.classList.add('active');
+      Bridge.provider = badge.dataset.provider;
+      $('#bridgeFromAmount').dispatchEvent(new Event('input'));
+    });
+  });
+
+  // Swap direction
+  $('#bridgeSwapDirBtn').addEventListener('click', () => {
+    [Bridge.fromChain, Bridge.toChain] = [Bridge.toChain, Bridge.fromChain];
+    [Bridge.fromToken, Bridge.toToken] = [Bridge.toToken, Bridge.fromToken];
+    $('#bridgeFromName').textContent = NETWORKS[Bridge.fromChain]?.name || 'Unknown';
+    $('#bridgeToName').textContent = NETWORKS[Bridge.toChain]?.name || 'Unknown';
+    updateBridgeTokenUI('from');
+    updateBridgeTokenUI('to');
+    $('#bridgeFromAmount').dispatchEvent(new Event('input'));
+  });
+
+  // Token select
+  $('#bridgeFromTokenBtn').addEventListener('click', () => openTokenModal('bridgeFromToken'));
+  $('#bridgeToTokenBtn').addEventListener('click', () => openTokenModal('bridgeToToken'));
+
+  // Network select
+  $('#bridgeFromNetworkBtn').addEventListener('click', () => openNetworkModal('bridgeFrom'));
+  $('#bridgeToNetworkBtn').addEventListener('click', () => openNetworkModal('bridgeTo'));
+
+  // Bridge button
+  $('#bridgeBtn').addEventListener('click', async () => {
+    if (!Wallet.address) {
+      await Wallet.connect();
+      if (!Wallet.address) return;
+    }
+    if (!Bridge.fromToken || !Bridge.toToken || !$('#bridgeFromAmount').value) return;
+    const btn = $('#bridgeBtn');
+    btn.textContent = 'Bridging...';
+    btn.classList.add('loading');
+    await Bridge.execute();
+    btn.textContent = 'Bridge';
+    btn.classList.remove('loading');
+  });
+}
+
+function updateBridgeTokenUI(side) {
+  const token = side === 'from' ? Bridge.fromToken : Bridge.toToken;
+  if (!token) return;
+  const prefix = side === 'from' ? 'bridgeFrom' : 'bridgeTo';
+  $(`#${prefix}TokenSymbol`).textContent = token.symbol;
+  const icon = $(`#${prefix}TokenIcon`);
+  if (token.icon) { icon.src = token.icon; icon.style.display = 'block'; }
+}
+
+function updateBridgeBtn() {
+  const btn = $('#bridgeBtn');
+  if (!Wallet.address) { btn.textContent = 'Connect Wallet'; btn.disabled = false; return; }
+  if (!Bridge.fromToken || !Bridge.toToken) { btn.textContent = 'Select Token'; btn.disabled = true; return; }
+  if (!$('#bridgeFromAmount').value) { btn.textContent = 'Enter Amount'; btn.disabled = true; return; }
+  btn.textContent = `Bridge ${Bridge.fromToken.symbol} (${NETWORKS[Bridge.fromChain]?.short}) → ${Bridge.toToken.symbol} (${NETWORKS[Bridge.toChain]?.short})`;
+  btn.disabled = false;
+}
+
+// ─── Token Modal ───
+function initModals() {
+  $('#tokenModalClose').addEventListener('click', closeTokenModal);
+  $('#tokenModal').addEventListener('click', (e) => {
+    if (e.target === $('#tokenModal')) closeTokenModal();
+  });
+  $('#networkModalClose').addEventListener('click', closeNetworkModal);
+  $('#networkModal').addEventListener('click', (e) => {
+    if (e.target === $('#networkModal')) closeNetworkModal();
+  });
+  $('#tokenSearch').addEventListener('input', filterTokens);
+  $('#netSearch').addEventListener('input', filterNetworks);
+}
+
+function openTokenModal(target) {
+  currentModal = target;
+  const chainId = target === 'fromToken' ? Swap.fromChain : (target === 'toToken' ? Swap.toChain : (target === 'bridgeFromToken' ? Bridge.fromChain : Bridge.toChain));
+  const tokens = getTokensForChain(chainId);
+  renderTokenList(tokens);
+  $('#tokenModal').style.display = 'flex';
+  $('#tokenSearch').value = '';
+  $('#tokenSearch').focus();
+}
+
+function closeTokenModal() { $('#tokenModal').style.display = 'none'; }
+
+function renderTokenList(tokens) {
+  const list = $('#tokenList');
+  list.innerHTML = tokens.map((t) => `
+    <div class="token-item" data-address="${t.address}">
+      <img src="${t.icon}" alt="${t.symbol}" onerror="this.style.display='none'">
+      <div class="token-item-info">
+        <div class="token-item-name">${t.symbol}</div>
+        <div class="token-item-chain">${t.name}</div>
+      </div>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.token-item').forEach((item) => {
+    item.addEventListener('click', () => {
+      const addr = item.dataset.address;
+      const token = tokens.find((t) => t.address === addr);
+      if (!token) return;
+
+      if (currentModal === 'fromToken') { Swap.fromToken = token; updateTokenUI('from'); }
+      else if (currentModal === 'toToken') { Swap.toToken = token; updateTokenUI('to'); }
+      else if (currentModal === 'bridgeFromToken') { Bridge.fromToken = token; updateBridgeTokenUI('from'); }
+      else if (currentModal === 'bridgeToToken') { Bridge.toToken = token; updateBridgeTokenUI('to'); }
+
+      closeTokenModal();
+      // Re-trigger quote
+      const amountInput = (currentModal.includes('bridge')) ? $('#bridgeFromAmount') : $('#fromAmount');
+      amountInput.dispatchEvent(new Event('input'));
+    });
+  });
+}
+
+function filterTokens() {
+  const q = $('#tokenSearch').value.toLowerCase();
+  const items = $('#tokenList').querySelectorAll('.token-item');
+  items.forEach((item) => {
+    const text = item.textContent.toLowerCase();
+    item.style.display = text.includes(q) ? 'flex' : 'none';
+  });
+}
+
+// ─── Network Modal ───
+function openNetworkModal(target) {
+  modalNetworkTarget = target;
+  const nets = Object.values(NETWORKS);
+  renderNetworkGrid(nets);
+  $('#networkModal').style.display = 'flex';
+  $('#netSearch').value = '';
+}
+
+function closeNetworkModal() { $('#networkModal').style.display = 'none'; }
+
+function renderNetworkGrid(nets) {
+  const grid = $('#networkGrid');
+  grid.innerHTML = nets.map((n) => `
+    <div class="network-item" data-id="${n.id}">
+      <img src="${n.icon}" alt="${n.name}" onerror="this.style.display='none'">
+      <span>${n.name}</span>
+    </div>
+  `).join('');
+
+  grid.querySelectorAll('.network-item').forEach((item) => {
+    item.addEventListener('click', () => {
+      const id = parseInt(item.dataset.id);
+      const net = NETWORKS[id];
+      if (!net) return;
+
+      if (modalNetworkTarget === 'swap') {
+        Swap.fromChain = id;
+        Swap.toChain = id;
+        $('#networkName').textContent = net.name;
+        $('#networkIcon').src = net.icon;
+        // Reset tokens for new chain
+        const tokens = getTokensForChain(id);
+        Swap.fromToken = tokens[0];
+        Swap.toToken = tokens[1];
+        updateTokenUI('from');
+        updateTokenUI('to');
+      } else if (modalNetworkTarget === 'bridgeFrom') {
+        Bridge.fromChain = id;
+        $('#bridgeFromName').textContent = net.name;
+        $('#bridgeFromIcon').src = net.icon;
+        const tokens = getTokensForChain(id);
+        Bridge.fromToken = tokens[0];
+        updateBridgeTokenUI('from');
+      } else if (modalNetworkTarget === 'bridgeTo') {
+        Bridge.toChain = id;
+        $('#bridgeToName').textContent = net.name;
+        $('#bridgeToIcon').src = net.icon;
+        const tokens = getTokensForChain(id);
+        Bridge.toToken = tokens[0];
+        updateBridgeTokenUI('to');
+      }
+
+      closeNetworkModal();
+      // Re-trigger quote
+      const amountInput = modalNetworkTarget === 'swap' ? $('#fromAmount') : $('#bridgeFromAmount');
+      amountInput.dispatchEvent(new Event('input'));
+    });
+  });
+}
+
+function filterNetworks() {
+  const q = $('#netSearch').value.toLowerCase();
+  const items = $('#networkGrid').querySelectorAll('.network-item');
+  items.forEach((item) => {
+    item.style.display = item.textContent.toLowerCase().includes(q) ? '' : 'none';
+  });
+}
+
+// ─── Settings ───
+function initSettings() {
+  $('#swapSettingsBtn').addEventListener('click', () => {
+    $('#settingsModal').style.display = 'flex';
+  });
+  $('#settingsModalClose').addEventListener('click', () => {
+    $('#settingsModal').style.display = 'none';
+  });
+  $('#settingsModal').addEventListener('click', (e) => {
+    if (e.target === $('#settingsModal')) $('#settingsModal').style.display = 'none';
+  });
+  $$('.slippage-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      $$('.slippage-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      Swap.slippage = parseFloat(btn.dataset.val);
+      $('#customSlippage').value = '';
+    });
+  });
+  $('#customSlippage').addEventListener('input', () => {
+    const val = parseFloat($('#customSlippage').value);
+    if (val > 0 && val <= 50) {
+      $$('.slippage-btn').forEach((b) => b.classList.remove('active'));
+      Swap.slippage = val;
+    }
+  });
+}
+
+// ─── Balance Updates ───
+async function updateBalances() {
+  if (!Wallet.address) return;
+  await Wallet.updateBalance();
+
+  // For swap from token
+  if (Swap.fromToken) {
+    if (Swap.fromToken.symbol === NETWORKS[Swap.fromChain]?.native.symbol) {
+      $('#fromBalance').textContent = parseFloat(Wallet.balance).toFixed(4);
+    } else {
+      // ERC20 balance via contract call
+      try {
+        const erc20 = new ethers.Contract(Swap.fromToken.address, ['function balanceOf(address) view returns (uint256)'], Wallet.provider);
+        const bal = await erc20.balanceOf(Wallet.address);
+        $('#fromBalance').textContent = formatAmount(bal, Swap.fromToken.decimals);
+      } catch { $('#fromBalance').textContent = '—'; }
+    }
+  }
+
+  // For bridge from token
+  if (Bridge.fromToken) {
+    if (Bridge.fromToken.symbol === NETWORKS[Bridge.fromChain]?.native.symbol) {
+      $('#bridgeFromBalance').textContent = parseFloat(Wallet.balance).toFixed(4);
+    } else {
+      try {
+        const erc20 = new ethers.Contract(Bridge.fromToken.address, ['function balanceOf(address) view returns (uint256)'], Wallet.provider);
+        const bal = await erc20.balanceOf(Wallet.address);
+        $('#bridgeFromBalance').textContent = formatAmount(bal, Bridge.fromToken.decimals);
+      } catch { $('#bridgeFromBalance').textContent = '—'; }
+    }
+  }
+}
+
+function updateNetworkUI() {
+  if (Wallet.chainId) {
+    const net = NETWORKS[Wallet.chainId];
+    if (net) {
+      $('#networkName').textContent = net.name;
+      $('#networkIcon').src = net.icon;
+    }
+  }
+}
+
+// ─── Toast ───
+function showToast(msg, type = '') {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+// ─── Utilities ───
+function debounce(fn, ms) {
+  let timer;
+  return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); };
+}

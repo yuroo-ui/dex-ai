@@ -1,89 +1,67 @@
-"""Dex AI Web Hub — Uniswap-style skill marketplace dashboard."""
+"""Dex AI Web Hub — DEX frontend with wallet connect, swap, and bridge."""
 import json
-import os
 from pathlib import Path
 from fastapi import FastAPI, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+import httpx
 
-app = FastAPI(title="dex-ai", version="0.1.0")
+app = FastAPI(title="dex.ai", version="1.0.0")
+app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-PLUGINS_DIR = Path(__file__).parent.parent / "packages" / "plugins"
-
-
-def scan_plugins():
-    """Scan all plugins and their skills from the filesystem."""
-    plugins = []
-    if not PLUGINS_DIR.exists():
-        return plugins
-    for plugin_dir in sorted(PLUGINS_DIR.iterdir()):
-        if not plugin_dir.is_dir():
-            continue
-        skills = []
-        skills_dir = plugin_dir / "skills"
-        if skills_dir.exists():
-            for skill_dir in sorted(skills_dir.iterdir()):
-                sm = skill_dir / "SKILL.md"
-                if sm.exists():
-                    skills.append({
-                        "name": skill_dir.name,
-                        "path": f"packages/plugins/{plugin_dir.name}/skills/{skill_dir.name}/SKILL.md",
-                    })
-        plugins.append({
-            "name": plugin_dir.name,
-            "skills": [s["name"] for s in skills],
-            "skill_count": len(skills),
-            "skills_detail": skills,
-        })
-    return plugins
+BASE = Path(__file__).parent
+PLUGINS_DIR = BASE.parent / "packages" / "plugins"
 
 
-@app.get("/")
-async def index():
-    """Serve the main page."""
-    html_path = Path(__file__).parent / "templates" / "index.html"
-    return HTMLResponse(html_path.read_text())
+# ─── Pages ───
+@app.get("/", response_class=HTMLResponse)
+async def home():
+    return (BASE / "templates" / "dex.html").read_text()
 
 
-@app.get("/api/plugins")
-async def get_plugins():
-    """List all plugins with skills."""
-    plugins = scan_plugins()
-    return {"plugins": plugins, "total": len(plugins)}
-
-
-@app.get("/api/skills")
-async def get_skills():
-    """List all skills across all plugins."""
-    all_skills = []
-    for plugin in scan_plugins():
-        for skill in plugin["skills_detail"]:
-            skill_md_path = PLUGINS_DIR / plugin["name"] / "skills" / skill["name"] / "SKILL.md"
-            description = ""
-            if skill_md_path.exists():
-                content = skill_md_path.read_text()
-                for line in content.split("\n"):
-                    if line.startswith("description:"):
-                        description = line.split(":", 1)[1].strip().strip('"').strip("'")
-                        break
-            all_skills.append({
-                "name": skill["name"],
-                "plugin": plugin["name"],
-                "description": description,
-                "path": skill["path"],
-            })
-    return {"skills": all_skills, "total": len(all_skills)}
-
-
+# ─── API ───
 @app.get("/health")
 async def health():
-    return {"status": "ok", "service": "dex-ai"}
+    return {"status": "ok", "service": "dex.ai", "version": "1.0.0"}
 
 
-# Mount static files LAST (after all API routes)
-app.mount("/static", StaticFiles(directory=Path(__file__).parent / "static"), name="static")
+@app.get("/api/networks")
+async def networks():
+    return {"networks": list((BASE / "static" / "js" / "networks.js").read_text()[:200])}
 
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 8000)))
+@app.get("/api/quote")
+async def get_quote(
+    from_chain: int, to_chain: int,
+    from_token: str, to_token: str,
+    amount: str, slippage: float = 0.005
+):
+    """Proxy Li.Fi quote API to avoid CORS issues."""
+    params = {
+        "fromChain": from_chain, "toChain": to_chain,
+        "fromToken": from_token, "toToken": to_token,
+        "fromAmount": amount, "slippage": slippage,
+    }
+    async with httpx.AsyncClient() as client:
+        resp = await client.get("https://li.quest/v1/quote", params=params, timeout=15)
+        return JSONResponse(resp.json(), status_code=resp.status_code)
+
+
+@app.get("/api/chains")
+async def chains():
+    """Get supported chains from Li.Fi."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.get("https://li.quest/v1/chains", timeout=10)
+        return JSONResponse(resp.json(), status_code=resp.status_code)
+
+
+@app.get("/api/tokens")
+async def tokens(chain: int = Query(default=1)):
+    """Get tokens for a chain from Li.Fi."""
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(f"https://li.quest/v1/tokens", params={"chains": chain}, timeout=10)
+        return JSONResponse(resp.json(), status_code=resp.status_code)
+
+
+app.mount("/static", StaticFiles(directory=str(BASE / "static")), name="static")

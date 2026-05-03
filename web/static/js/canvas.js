@@ -1,11 +1,10 @@
-/* ═══ Animated network background ═══ */
+// ═══ Network Particles Canvas ═══
 const canvas = document.getElementById('bgCanvas');
 const ctx = canvas.getContext('2d');
-
 let W, H;
 const particles = [];
-const CONNECTION_DIST = 150;
-const PARTICLE_COUNT = 60;
+const NODE_COUNT = 50;
+const CONNECT_DIST = 180;
 
 function resize() {
   W = canvas.width = window.innerWidth;
@@ -14,14 +13,11 @@ function resize() {
 window.addEventListener('resize', resize);
 resize();
 
-// Create particles
-for (let i = 0; i < PARTICLE_COUNT; i++) {
+for (let i = 0; i < NODE_COUNT; i++) {
   particles.push({
-    x: Math.random() * W,
-    y: Math.random() * H,
-    vx: (Math.random() - 0.5) * 0.4,
-    vy: (Math.random() - 0.5) * 0.4,
-    r: Math.random() * 2 + 1,
+    x: Math.random() * W, y: Math.random() * H,
+    vx: (Math.random() - 0.5) * 0.4, vy: (Math.random() - 0.5) * 0.4,
+    r: Math.random() * 1.8 + 0.8,
   });
 }
 
@@ -34,38 +30,31 @@ function draw() {
       const dx = particles[i].x - particles[j].x;
       const dy = particles[i].y - particles[j].y;
       const dist = Math.sqrt(dx * dx + dy * dy);
-
-      if (dist < CONNECTION_DIST) {
-        const alpha = (1 - dist / CONNECTION_DIST) * 0.15;
+      if (dist < CONNECT_DIST) {
+        const alpha = (1 - dist / CONNECT_DIST) * 0.15;
         ctx.beginPath();
-        ctx.strokeStyle = `rgba(99,102,241,${alpha})`;
-        ctx.lineWidth = 0.5;
         ctx.moveTo(particles[i].x, particles[i].y);
         ctx.lineTo(particles[j].x, particles[j].y);
+        ctx.strokeStyle = `rgba(99, 102, 241, ${alpha})`;
+        ctx.lineWidth = 1;
         ctx.stroke();
       }
     }
   }
 
-  // Draw particles
+  // Draw & move particles
   for (const p of particles) {
     ctx.beginPath();
     ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(129,140,248,0.3)';
+    ctx.fillStyle = 'rgba(129, 140, 248, 0.5)';
     ctx.fill();
 
-    // Move
     p.x += p.vx;
     p.y += p.vy;
-
-    // Wrap
-    if (p.x < 0) p.x = W;
-    if (p.x > W) p.x = 0;
-    if (p.y < 0) p.y = H;
-    if (p.y > H) p.y = 0;
+    if (p.x < 0 || p.x > W) p.vx *= -1;
+    if (p.y < 0 || p.y > H) p.vy *= -1;
   }
 
   requestAnimationFrame(draw);
 }
-
 draw();

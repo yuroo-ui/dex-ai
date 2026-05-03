@@ -1,0 +1,26 @@
+{
+  "name": "dex-ai",
+  "version": "0.1.0",
+  "description": "AI tools for DEX integration — skills, plugins, and agents",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "packages/plugins/*"
+  ],
+  "scripts": {
+    "lint": "markdownlint '**/*.md' --ignore node_modules --ignore docs",
+    "lint:fix": "markdownlint '**/*.md' --ignore node_modules --ignore docs --fix",
+    "eval": "node scripts/eval.mjs",
+    "docs": "typedoc",
+    "build": "nx run-many --target=build",
+    "test": "nx run-many --target=test"
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "^0.13.0",
+    "nx": "^19.0.0",
+    "typedoc": "^0.26.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "./node_modules/nx/schemas/nx-schema.json",
+  "namedInputs": {
+    "default": ["{projectRoot}/**/*", "!{projectRoot}/**/*.md"],
+    "docs": ["{projectRoot}/**/*.md"]
+  },
+  "targetDefaults": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["default"]
+    },
+    "test": {
+      "inputs": ["default"]
+    },
+    "lint": {
+      "inputs": ["docs"]
+    }
+  }
+}

@@ -16,6 +16,7 @@ npx skills add your-org/dex-ai
 /plugin install dex-hooks       # Custom DEX hooks development
 /plugin install dex-analytics   # On-chain analytics & indexing
 /plugin install dex-defi        # Lending, liquidity, yield
+/plugin install dex-bridge      # Cross-chain bridge via Li.Fi, Relay, etc.
 ```
 
 ## Featured Skills
@@ -28,6 +29,9 @@ npx skills add your-org/dex-ai
 | `hook-developer`    | dex-hooks     | Build custom DEX hooks for advanced order types      |
 | `yield-optimizer`   | dex-defi      | Auto-compound, find best yield opportunities         |
 | `mev-protect`       | dex-trading   | MEV-resistant transaction submission                 |
+| `bridge-lifi`       | dex-bridge    | Bridge & swap across 30+ chains via Li.Fi            |
+| `bridge-relay`      | dex-bridge    | Instant cross-chain transfers via Relay solver       |
+| `bridge-any`        | dex-bridge    | Universal bridge patterns & provider comparison      |
 
 ## Project Structure
 
